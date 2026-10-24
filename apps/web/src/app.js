@@ -11,7 +11,8 @@
   var TEAM_CATALOG_CACHE_KEY = 'STREAMED_TEAM_CATALOG_CACHE';
   var AVATAR_STYLES = ['avataaars', 'adventurer', 'lorelei', 'micah', 'personas', 'notionists', 'pixel-art', 'bottts'];
   var AVATAR_BACKGROUNDS = ['b6e3f4', 'c0aede', 'ffd5dc', 'ffdfbf', 'd1d4f9', 'c7f9cc', 'fef3c7', 'fbcfe8'];
-  var IS_TV_RUNTIME = /Tizen|SMART-TV|SmartTV|SamsungBrowser|TV/i.test(navigator.userAgent || '');
+  var IS_WEBOS_RUNTIME = !!(window.PalmSystem || window.webOSSystem) || /Web[0O]S|NetCast/i.test(navigator.userAgent || '');
+  var IS_TV_RUNTIME = IS_WEBOS_RUNTIME || /Tizen|SMART-TV|SmartTV|SamsungBrowser|TV/i.test(navigator.userAgent || '');
   document.documentElement.classList.toggle('tv-mode', IS_TV_RUNTIME);
 
   var state = {
@@ -59,6 +60,7 @@
     streamResolutionPending: {},
     playbackSwitchTimer: null,
     playbackStartAttemptTimers: [],
+    playbackPausedByUser: false,
     playerFocusTimer: null,
     playerEngine: '',
     playerHls: null,
@@ -264,11 +266,16 @@
   }
 
   function loadLocalCatalog() {
-    return fetch(CATALOG_URL)
+    // Packaged TV apps use file:// origins; preload their sample catalog instead
+    // of depending on Fetch accepting that protocol. Live API mode ignores it.
+    var localCatalog = DEMO_MODE && window.STREAMED_DEMO_CATALOG
+      ? Promise.resolve(window.STREAMED_DEMO_CATALOG)
+      : fetch(CATALOG_URL)
       .then(function (res) {
         if (!res.ok) throw new Error('Could not load match catalog.');
         return res.json();
-      })
+      });
+    return localCatalog
       .then(function (payload) {
         state.sports = orderSports(payload.sports);
         state.matches = normalizeMatches(payload);
@@ -3299,7 +3306,7 @@
   }
 
   function kickPlaybackStart(stream) {
-    if (els.playerView.hidden) return;
+    if (els.playerView.hidden || state.playbackPausedByUser) return;
     if (state.playerEngine === 'avplay') {
       if (!hasAvplaySupport()) return;
       try {
@@ -3315,6 +3322,7 @@
         var promise = els.videoPlayer.play && els.videoPlayer.play();
         if (promise && promise.catch) {
           promise.catch(function () {
+            if (els.playerView.hidden || state.playbackPausedByUser) return;
             try {
               els.videoPlayer.muted = true;
               var retry = els.videoPlayer.play && els.videoPlayer.play();
@@ -3483,7 +3491,7 @@
         state.avplayReady = true;
         try {
           syncAvplayDisplayRect();
-          webapis.avplay.play();
+          if (!state.playbackPausedByUser) webapis.avplay.play();
           setStatus('Opening ' + formatStreamLabel(stream) + ' on TV...');
           syncPlayerPlaybackButton();
         } catch (error) {
@@ -3498,6 +3506,7 @@
   }
 
   function playMatch(match, stream, orderedStreams, streamIndex) {
+    state.playbackPausedByUser = false;
     var streams = orderedStreams && orderedStreams.length ? orderedStreams.slice() : getOrderedPlayableStreams(getStreamsForMatch(match));
     var index = typeof streamIndex === 'number' ? streamIndex : streams.map(getStreamKey).indexOf(getStreamKey(stream));
     if (index < 0) {
@@ -3568,12 +3577,21 @@
     els.playerPlayButton.textContent = state.embedPlaybackPaused ? 'Play' : 'Pause';
   }
 
-  function togglePlayerPlayback() {
+  function togglePlayerPlayback(shouldPlay) {
+    if (typeof shouldPlay !== 'boolean') shouldPlay = null;
+    var currentlyPlaying = state.playerEngine === 'avplay' ? safeGetAvplayState() === 'PLAYING'
+      : state.playerEngine === 'html5' ? !els.videoPlayer.paused : !state.embedPlaybackPaused;
+    state.playbackPausedByUser = shouldPlay === null ? currentlyPlaying : !shouldPlay;
+    if (state.playbackPausedByUser) {
+      clearPlaybackStartAttemptTimers();
+      clearPlaybackSwitchTimer();
+    }
     if (state.playerEngine === 'avplay') {
       try {
         var avplayState = safeGetAvplayState();
-        if (avplayState === 'PLAYING') webapis.avplay.pause();
-        else webapis.avplay.play();
+        var playAvplay = shouldPlay === null ? avplayState !== 'PLAYING' : shouldPlay;
+        if (playAvplay) webapis.avplay.play();
+        else webapis.avplay.pause();
       } catch (error) {
         setStatus('TV player rejected that command.');
       }
@@ -3581,7 +3599,8 @@
       return;
     }
     if (state.playerEngine === 'html5' && !els.videoPlayer.hidden) {
-      if (els.videoPlayer.paused) {
+      var playVideo = shouldPlay === null ? els.videoPlayer.paused : shouldPlay;
+      if (playVideo) {
         els.videoPlayer.play().catch(function () { scheduleStreamFallback('playback blocked', 500); });
       } else {
         els.videoPlayer.pause();
@@ -3590,7 +3609,7 @@
       return;
     }
     if (!els.embedPlayer.hidden) {
-      state.embedPlaybackPaused = !state.embedPlaybackPaused;
+      state.embedPlaybackPaused = shouldPlay === null ? !state.embedPlaybackPaused : !shouldPlay;
       if (state.embedPlaybackPaused) {
         postEmbedPauseCommands(els.embedPlayer);
         trySetAccessibleEmbedPlayback(els.embedPlayer, false);
@@ -4011,6 +4030,7 @@
     state.userInteracted = true;
     if (state.profileOpen && !els.profileView.hidden) {
       event.preventDefault();
+      if (key === 'Escape' && IS_WEBOS_RUNTIME) returnToWebos();
       if (key === 'ArrowLeft' || key === 37) moveFocus('left');
       if (key === 'ArrowRight' || key === 39) moveFocus('right');
       if (key === 'ArrowUp' || key === 38) moveFocus('up');
@@ -4070,7 +4090,10 @@
       else if (key === 'ArrowLeft' || key === 37) switchToPreviousStream('manual switch');
       else if (key === 'ArrowRight' || key === 39) switchToNextStream('manual switch');
       else if (key === 'Enter' || key === 13) togglePlayerPlayback();
-      else if (key === 'MediaPlayPause' || key === 'MediaPlay' || key === 'MediaPause' || key === 415 || key === 19 || key === 10252) togglePlayerPlayback();
+      else if (key === 'MediaPlay' || key === 415) togglePlayerPlayback(true);
+      else if (key === 'MediaPause' || key === 19) togglePlayerPlayback(false);
+      else if (key === 'MediaPlayPause' || key === 10252) togglePlayerPlayback();
+      else if (key === 'MediaStop' || key === 413) closePlayer();
       else if (key === 'MediaTrackNext' || key === 417) switchToNextStream('manual switch');
       else if (key === 'MediaTrackPrevious' || key === 412) switchToPreviousStream('manual switch');
       return;
@@ -4100,6 +4123,7 @@
         toggleNavMore(false, false);
         return;
       }
+      if (IS_WEBOS_RUNTIME) { returnToWebos(); return; }
       focusActiveSportSelector();
       return;
     }
@@ -4148,7 +4172,10 @@
     state.userInteracted = true;
     if (event && event.preventDefault) event.preventDefault();
 
-    if (state.profileOpen && !els.profileView.hidden) return;
+    if (state.profileOpen && !els.profileView.hidden) {
+      if (IS_WEBOS_RUNTIME) returnToWebos();
+      return;
+    }
 
     if (!els.playerView.hidden) {
       closePlayer();
@@ -4170,7 +4197,14 @@
       return;
     }
 
-    focusActiveSportSelector();
+    if (IS_WEBOS_RUNTIME) returnToWebos();
+    else focusActiveSportSelector();
+  }
+
+  function returnToWebos() {
+    stopHeroPreview();
+    if (window.webOS && typeof window.webOS.platformBack === 'function') window.webOS.platformBack();
+    else if (window.PalmSystem && typeof window.PalmSystem.platformBack === 'function') window.PalmSystem.platformBack();
   }
 
   function handleTizenHardwareKey(event) {
@@ -4182,7 +4216,7 @@
 
   function registerTizenKeys() {
     if (!window.tizen || !tizen.tvinputdevice || !tizen.tvinputdevice.registerKey) return;
-    ['MediaPlayPause', 'MediaPlay', 'MediaPause', 'MediaTrackPrevious', 'MediaTrackNext'].forEach(function (name) {
+    ['MediaPlayPause', 'MediaPlay', 'MediaPause', 'MediaStop', 'MediaTrackPrevious', 'MediaTrackNext'].forEach(function (name) {
       try {
         tizen.tvinputdevice.registerKey(name);
       } catch (error) {}
@@ -4250,6 +4284,14 @@
   document.addEventListener('keydown', handleKeydown);
   window.addEventListener('tizenhwkey', handleTizenHardwareKey);
   window.addEventListener('popstate', handleHardwareBack);
+  document.addEventListener('visibilitychange', function () {
+    if (!IS_WEBOS_RUNTIME || !document.hidden) return;
+    if (!els.playerView.hidden) closePlayer();
+    stopHeroPreview();
+  });
+  document.addEventListener('webOSRelaunch', function () {
+    if (IS_WEBOS_RUNTIME) collectFocusables(true);
+  });
   window.addEventListener('resize', syncAvplayDisplayRect);
   registerTizenKeys();
   updateClock();

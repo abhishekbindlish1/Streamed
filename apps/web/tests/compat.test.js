@@ -60,6 +60,13 @@ test('legacy arrows, numeric-only remotes, and desktop typing keep their meaning
   assert.equal(compat.getKey({ key: 'a', keyCode: 65 }), 'a');
 });
 
+test('LG Magic Remote Back retains its meaning with vendor key names', () => {
+  const { compat } = loadCompat(true);
+  for (const key of ['Unidentified', 'VendorKey', 'GoBack', 'Back', '']) {
+    assert.equal(compat.getKey({ key, keyCode: 461 }), 'Escape');
+  }
+});
+
 test('browser scripts parse within the Chromium 69 JavaScript syntax baseline', () => {
   for (const name of ['src/compat.js', 'src/api.js', 'src/app.js', 'data/team-db.js', 'data/config.example.js']) {
     parse(fs.readFileSync(path.join(root, name), 'utf8'), { ecmaVersion: 2018 });

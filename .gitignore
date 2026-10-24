@@ -33,6 +33,7 @@ dist/
 *.tpk
 *.apk
 *.aab
+*.ipk
 *.jks
 *.keystore
 bin/

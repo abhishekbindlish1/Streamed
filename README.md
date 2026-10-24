@@ -9,6 +9,7 @@ in the same change; each platform still has its own build and release status.
 | Browser / Tizen web | [`apps/web`](apps/web) | Browser demo and older Tizen 5.5 / Chromium 69 compatibility checks |
 | Tizen .NET / NUI | [`apps/tizen-dotnet`](apps/tizen-dotnet) | Tizen 9 development build; device signing and playback need TV verification |
 | Android / MAUI | [`apps/android`](apps/android) | Experimental native playback, remote navigation, and Android/Android TV emulator checks |
+| LG webOS TV | [`apps/webos`](apps/webos) | Experimental IPK sharing the web client; offline sample media and Magic Remote support |
 | Go backend | [`services/api`](services/api) | Sports, profiles, pairing, configuration, and optional cloud integrations |
 | Extractor service | [`services/extractor`](services/extractor) | Separate Go service; production auth/configuration remains separate |
 
@@ -38,6 +39,7 @@ npm test
 npm run test:browser
 npm run test:legacy
 npm run build
+npm run build:webos
 ```
 
 Playwright checks desktop and 720p/1080p TV flows. A separate harness exercises

@@ -65,7 +65,7 @@ test('margin fallback spaces navigation when flex gap is unavailable', async ({ 
 });
 
 test('TV uses AVPlay for HLS, numeric media control and Return tear it down', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name === 'desktop', 'Samsung-specific native API contract');
+  test.skip(!testInfo.project.name.startsWith('tizen-'), 'Samsung-specific native API contract');
   await page.addInitScript(() => {
     let state = 'NONE';
     window.nativeCalls = [];
@@ -92,6 +92,15 @@ test('TV uses AVPlay for HLS, numeric media control and Return tear it down', as
   expect(calls).toContainEqual(['rect', 0, 0, 1920, 1080]);
   await page.evaluate(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Unidentified', keyCode: 10252, bubbles: true })));
   expect(await page.evaluate(() => window.webapis.avplay.getState())).toBe('PAUSED');
+  // Startup retries must not undo an explicit pause. Pause and Play are
+  // idempotent commands, including while the initial retry timers are pending.
+  await page.evaluate(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'VendorPause', keyCode: 19, bubbles: true })));
+  await page.waitForTimeout(1700);
+  expect(await page.evaluate(() => window.webapis.avplay.getState())).toBe('PAUSED');
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await page.evaluate(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'VendorPlay', keyCode: 415, bubbles: true })));
+    expect(await page.evaluate(() => window.webapis.avplay.getState())).toBe('PLAYING');
+  }
   await page.evaluate(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'XF86Back', keyCode: 10009, bubbles: true })));
   await expect(page.locator('#playerView')).toBeHidden();
   expect(await page.evaluate(() => window.webapis.avplay.getState())).toBe('NONE');

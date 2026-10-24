@@ -1,0 +1,79 @@
+name: LG and Samsung runtime checks
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'apps/web/**'
+      - 'apps/webos/**'
+      - 'apps/tizen-dotnet/**'
+      - 'scripts/*tv*'
+      - 'scripts/webos*'
+      - 'scripts/tizen*'
+      - '.github/workflows/vendor-tv.yml'
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vendor-tv-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lg_simulator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Prepare the official LG Simulator
+        run: python3 scripts/setup-tv-sdks.py webos --root "$RUNNER_TEMP/tv-sdk" --cache "$RUNNER_TEMP/tv-downloads"
+      - name: Build the LG development IPK
+        run: npm run build:webos
+      - name: Test in LG's actual Simulator
+        run: xvfb-run -a -s '-screen 0 2560x1440x24' node scripts/webos-simulator-smoke.js
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: lg-simulator-results
+          path: test-results/webos-simulator/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  samsung_emulator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - name: Free space for the vendor SDK and VM
+        run: sudo rm -rf -- /opt/hostedtoolcache/CodeQL /usr/share/swift "$ANDROID_HOME/ndk"
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Prepare the official Samsung image and Tizen CLI
+        run: python3 scripts/setup-tv-sdks.py tizen --root "$RUNNER_TEMP/tv-sdk" --cache "$RUNNER_TEMP/tv-downloads"
+      - name: Prepare VM acceleration and display dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb python3-pil libgtk2.0-0t64 libasound2t64 libxcb-xinerama0 libxss1 libpulse0 mesa-utils
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Build the native Tizen development package
+        run: dotnet build apps/tizen-dotnet/StreamedTv.csproj -c Release
+      - name: Install and launch the native TPK in Samsung TV 10
+        run: xvfb-run -a -s '-screen 0 2560x1440x24' /usr/bin/python3 scripts/tizen-runtime-smoke.py
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: samsung-emulator-results
+          path: test-results/tizen-emulator/
+          if-no-files-found: ignore
+          retention-days: 7

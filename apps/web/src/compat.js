@@ -14,9 +14,11 @@
 
   function getKey(event) {
     var code = event.keyCode || event.which;
+    // LG Magic Remote Back is 461, including when key is vendor-specific.
+    if (code === 461) return 'Escape';
     // Samsung may provide a vendor-specific key name (or "Unidentified") even
     // though its numeric Return / media / color key code is valid.
-    if ([10009, 403, 405, 406, 415, 19, 10252, 417, 412].indexOf(code) >= 0) return code;
+    if ([10009, 403, 405, 406, 413, 415, 19, 10252, 417, 412].indexOf(code) >= 0) return code;
     var key = event.key;
     if (!key || key === 'Unidentified' || key === 'Unknown') return code;
     var aliases = {

@@ -1,8 +1,12 @@
 {
   "name": "streamed",
   "private": true,
-  "workspaces": ["apps/web"],
-  "engines": { "node": ">=24" },
+  "workspaces": [
+    "apps/web"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "start": "npm --workspace streamed-tv start",
     "dev": "npm --workspace streamed-tv run dev",
@@ -13,6 +17,11 @@
     "test:legacy": "npm --workspace streamed-tv run test:legacy",
     "test:dotnet": "dotnet test tests/Streamed.Core.Tests/Streamed.Core.Tests.csproj",
     "sandbox": "node scripts/sandbox.js",
-    "screenshots": "node scripts/screenshots.js"
+    "screenshots": "node scripts/screenshots.js",
+    "build:webos": "node apps/webos/scripts/build-webos.js"
+  },
+  "devDependencies": {
+    "@webos-tools/cli": "3.2.6",
+    "hls.js": "1.7.3"
   }
 }
