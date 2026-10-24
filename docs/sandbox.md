@@ -65,7 +65,7 @@ CI creates a 1280×720 API 28 AVD with the official SDK tools, then runs
 emulator, checks boot within a deadline, installs the sandbox APK, and runs the
 rendering assertion. It starts and stops its own fixture server and emulator;
 startup logs and screenshots are retained as workflow artifacts on failure.
-For an existing prepared AVD, pass its name instead. Set
+For an inactive prepared AVD, pass its name instead. Set
 `ANDROID_FIXTURE_SERVER_RUNNING=true` to reuse a running fixture server and
 `ANDROID_EMULATOR_PORT` to select an unused emulator port. The script refuses
 to replace a running emulator on that port.

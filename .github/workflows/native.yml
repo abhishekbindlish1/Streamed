@@ -82,6 +82,12 @@ jobs:
           echo "$(dirname "$sdk_manager")" >> "$GITHUB_PATH"
           echo "$sdk_root/platform-tools" >> "$GITHUB_PATH"
           "$sdk_manager" --version
+          # Process substitution preserves sdkmanager's exit status when yes
+          # receives SIGPIPE after the final license prompt.
+          if ! "$sdk_manager" --licenses < <(yes) > "$RUNNER_TEMP/android-licenses.log" 2>&1; then
+            tail -n 10 "$RUNNER_TEMP/android-licenses.log" | sed 's/^/::error::/'
+            exit 1
+          fi
           if ! "$sdk_manager" "platform-tools" "platforms;android-36" "build-tools;36.0.0" "emulator" "system-images;android-28;default;x86_64" > "$RUNNER_TEMP/android-sdk.log" 2>&1; then
             cat "$RUNNER_TEMP/android-sdk.log"
             tail -n 8 "$RUNNER_TEMP/android-sdk.log" | sed 's/^/::error::/'
