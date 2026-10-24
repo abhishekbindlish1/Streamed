@@ -1,6 +1,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const http = require('node:http');
+const net = require('node:net');
 const { spawn } = require('node:child_process');
 const assert = require('node:assert/strict');
 const { chromium } = require('@playwright/test');
@@ -36,6 +37,11 @@ function targets() {
 
 (async () => {
   if (!appdir) throw new Error('Set WEBOS_SIMULATOR_APPDIR using setup-tv-sdks.py');
+  await new Promise((resolve, reject) => {
+    const reservation = net.createServer();
+    reservation.once('error', () => reject(new Error('Refusing to replace a service already using simulator debug port 9223')));
+    reservation.listen(9223, '127.0.0.1', () => reservation.close(resolve));
+  });
   await fs.mkdir(output, { recursive: true });
   log = await fs.open(path.join(output, 'simulator.log'), 'w');
   simulator = spawn(path.join(appdir, 'AppRun'), [app, '{}', '--ozone-platform=x11', '--no-sandbox', '--remote-debugging-port=9223'], {

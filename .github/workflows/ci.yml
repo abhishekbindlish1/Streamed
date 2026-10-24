@@ -73,9 +73,15 @@ jobs:
     permissions:
       contents: read
 
+  vendor_runtime_release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/vendor-tv.yml
+    permissions:
+      contents: read
+
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [test, native_release]
+    needs: [test, native_release, vendor_runtime_release]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
