@@ -12,6 +12,7 @@
   <name>Streamed</name>
   <description>Samsung TV web app for browsing live match streams.</description>
   <tizen:privilege name="http://tizen.org/privilege/internet"/>
+  <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
   <tizen:profile name="tv-samsung"/>
   <tizen:setting screen-orientation="landscape"
                  context-menu="disable"

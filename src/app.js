@@ -3266,7 +3266,7 @@
   function getStreamScore(stream) {
     var type = stream.type || getStreamType(stream.url, false);
     var text = [stream.label, stream.language, stream.source, stream.url].join(' ').toLowerCase();
-    var hlsSupport = els.videoPlayer.canPlayType('application/vnd.apple.mpegurl') || els.videoPlayer.canPlayType('application/x-mpegURL') || (window.Hls && window.Hls.isSupported());
+    var hlsSupport = hasAvplaySupport() || canPlayNativeHls(els.videoPlayer) || (window.Hls && window.Hls.isSupported());
     var score = 0;
     if (type === 'hls') score += hlsSupport ? 90 : 35;
     else if (type === 'mp4') score += 82;
@@ -4004,7 +4004,7 @@
   }
 
   function handleKeydown(event) {
-    var key = event.key || event.keyCode;
+    var key = window.StreamedCompat.getKey(event);
     state.userInteracted = true;
     if (state.profileOpen && !els.profileView.hidden) {
       event.preventDefault();

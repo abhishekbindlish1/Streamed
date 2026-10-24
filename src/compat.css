@@ -1,0 +1,77 @@
+/* Tizen 5.5 (2020 TVs / Chromium 69): preserve the current layout using older
+   CSS primitives. Feature checks also cover desktop browsers of that vintage. */
+@supports not (width: min(1px, 2px)) {
+  .profile-panel { width: 94vw; max-width: 980px; }
+  .nav-more-menu { width: 52vw; max-width: 520px; }
+  .hero-copy { width: 62vw; max-width: 760px; }
+  .profile-avatar-picker { width: 92vw; max-width: 860px; }
+  .player-meta h2 { max-width: 72vw; }
+  .player-stream-label { max-width: 66vw; }
+
+  @media (max-width: 1000px) {
+    .nav-more-menu { width: 82vw; max-width: 360px; }
+    .hero-copy { width: 88vw; max-width: none; }
+  }
+
+  html.tv-mode .hero-copy { width: 58vw; max-width: 640px; }
+}
+
+@supports not (aspect-ratio: 16 / 9) {
+  /* A percentage padding spacer keeps posters at 16:9 before images load. */
+  .poster::before { content: ''; display: block; padding-top: 56.25%; }
+  .avatar-choice { min-height: 130px; }
+}
+
+/* Chromium 69 supports Grid gap, so only measured Flexbox fallbacks apply.
+   Explicit margins avoid nested flex containers overriding inherited gap values. */
+.no-flex-gap .sports-list,
+.no-flex-gap .sport-button,
+.no-flex-gap .keyboard-row,
+.no-flex-gap .match-rail-heading,
+.no-flex-gap .profile-actions,
+.no-flex-gap .team-panel-heading,
+.no-flex-gap .stream-options-header,
+.no-flex-gap .top-actions,
+.no-flex-gap .avatar-picker-heading,
+.no-flex-gap .team-hub-header,
+.no-flex-gap .stream-picker-header,
+.no-flex-gap .rail-header,
+.no-flex-gap .hero-meta,
+.no-flex-gap .hero-team-actions,
+.no-flex-gap .stream-picker-status-row,
+.no-flex-gap .stream-match-meta,
+.no-flex-gap .stream-option-topline,
+.no-flex-gap .player-controls,
+.no-flex-gap .stream-option-badges,
+.no-flex-gap .detail-actions,
+.no-flex-gap .team-badges,
+.no-flex-gap .play-chip { gap: 0; }
+
+.no-flex-gap .sports-list > * + *,
+.no-flex-gap .team-badges > * + * { margin-left: 6px; }
+.no-flex-gap .sport-button > * + *,
+.no-flex-gap .keyboard-row > * + * { margin-left: 8px; }
+.no-flex-gap .match-rail-heading > * + *,
+.no-flex-gap .profile-actions > * + * { margin-left: 12px; }
+.no-flex-gap .team-panel-heading > * + *,
+.no-flex-gap .stream-options-header > * + * { margin-left: 16px; }
+.no-flex-gap .top-actions > * + *,
+.no-flex-gap .avatar-picker-heading > * + * { margin-left: 18px; }
+.no-flex-gap .team-hub-header > * + *,
+.no-flex-gap .stream-picker-header > * + * { margin-left: 22px; }
+.no-flex-gap .rail-header > * + * { margin-left: 24px; }
+.no-flex-gap .play-icon { margin-right: 8px; }
+
+/* Wrapping rows use trailing margins so each new line starts at the left. */
+.no-flex-gap .hero-meta > * { margin: 0 13px 13px 0; }
+.no-flex-gap.tv-mode .hero-meta > *,
+.no-flex-gap .hero-team-actions > *,
+.no-flex-gap .stream-picker-status-row > *,
+.no-flex-gap .stream-match-meta > *,
+.no-flex-gap .stream-option-topline > *,
+.no-flex-gap .player-controls > * { margin: 0 10px 10px 0; }
+.no-flex-gap .stream-option-badges > * { margin: 0 8px 8px 0; }
+.no-flex-gap .detail-actions > * { margin: 0 12px 12px 0; }
+
+/* "start" for flex alignment was added later than "flex-start". */
+.stream-options-header { align-items: flex-start; }

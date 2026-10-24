@@ -16,6 +16,8 @@
 # Dependencies and logs
 node_modules/
 *.log
+test-results/
+playwright-report/
 
 # Tizen build and signing outputs
 /Build/

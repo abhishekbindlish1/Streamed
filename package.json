@@ -9,6 +9,13 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "check": "node --check server.js && node --check src/api.js && node --check src/app.js && node --check data/team-db.js && node --check data/config.example.js"
+    "check": "node --check server.js && node --check src/compat.js && node --check src/api.js && node --check src/app.js && node --check data/team-db.js && node --check data/config.example.js",
+    "test": "node --test tests/*.test.js",
+    "test:browser": "playwright test",
+    "test:legacy": "node --use-env-proxy --test tests/legacy/*.test.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "acorn": "8.19.0"
   }
 }
