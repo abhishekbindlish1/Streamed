@@ -82,7 +82,7 @@ jobs:
           echo "$(dirname "$sdk_manager")" >> "$GITHUB_PATH"
           echo "$sdk_root/platform-tools" >> "$GITHUB_PATH"
           "$sdk_manager" --version
-          if ! "$sdk_manager" "platform-tools" "platforms;android-36" "build-tools;36.0.0" > "$RUNNER_TEMP/android-sdk.log" 2>&1; then
+          if ! "$sdk_manager" "platform-tools" "platforms;android-36" "build-tools;36.0.0" "emulator" "system-images;android-28;default;x86_64" > "$RUNNER_TEMP/android-sdk.log" 2>&1; then
             cat "$RUNNER_TEMP/android-sdk.log"
             tail -n 8 "$RUNNER_TEMP/android-sdk.log" | sed 's/^/::error::/'
             exit 1
@@ -99,46 +99,24 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Android sandbox startup and screenshot
-        uses: reactivecircus/android-emulator-runner@v2
         timeout-minutes: 12
-        with:
-          api-level: 28
-          target: default
-          arch: x86_64
-          avd-name: StreamedCi
-          ram-size: 1536M
-          emulator-boot-timeout: 360
-          emulator-options: >-
-            -no-window -no-audio -no-boot-anim -no-snapshot
-            -gpu swiftshader_indirect -feature -Vulkan
-            -stdouterr-file /tmp/streamed-emulator.log
-          pre-emulator-launch-script: |
-            cat >> "$ANDROID_AVD_HOME/StreamedCi.avd/config.ini" <<'CONFIG'
-            hw.lcd.width=1280
-            hw.lcd.height=720
-            hw.lcd.density=160
-            CONFIG
-          disable-animations: true
-          script: |
-            node scripts/sandbox.js > /tmp/streamed-sandbox.log 2>&1 &
-            curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:8080/health
-            adb install -r apps/android/bin/Debug/net10.0-android/android-x64/com.streamed.tv.android.sandbox-Signed.apk
-            SCREENSHOT_DIR=test-results/android bash scripts/android-smoke.sh
-      - name: Report emulator startup diagnostics
-        if: always()
         run: |
-          if [[ -f /tmp/streamed-emulator.log ]]; then
-            tail -n 100 /tmp/streamed-emulator.log
-            if [[ "${{ job.status }}" != success ]]; then
-              grep -Ei 'error|fatal|panic|failed|not enough|no space' /tmp/streamed-emulator.log | tail -n 15 | sed 's/^/::error::/' || true
-            fi
-          fi
-          df -h / /tmp
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/streamed-avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          printf 'no\n' | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --force --name StreamedCi --package 'system-images;android-28;default;x86_64'
+          cat >> "$ANDROID_AVD_HOME/StreamedCi.avd/config.ini" <<'CONFIG'
+          hw.cpu.ncore=2
+          hw.ramSize=1536
+          hw.lcd.width=1280
+          hw.lcd.height=720
+          hw.lcd.density=160
+          CONFIG
+          bash scripts/android-ci-smoke.sh StreamedCi
       - uses: actions/upload-artifact@v6
         if: always()
         with:
-          name: android-emulator-log
-          path: /tmp/streamed-emulator.log
+          name: android-startup-logs
+          path: test-results/android/*.log
           if-no-files-found: ignore
           retention-days: 7
       - name: Build ARM64 device development APK
