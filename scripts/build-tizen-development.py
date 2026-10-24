@@ -3,17 +3,10 @@
 import base64
 import os
 from pathlib import Path
-import pty
-import re
 import secrets
-import select
-import shutil
-import signal
 import subprocess
 import sys
 import tempfile
-import termios
-import time
 
 root = Path(__file__).resolve().parent.parent
 sdk = Path(os.environ['TIZEN_SDK_DIRECTORY']).resolve()
@@ -48,53 +41,8 @@ def run(command, env, timeout):
         raise RuntimeError('Tizen development build command failed')
 
 
-def package_with_sdk(package, destination, profile, env):
-    # Without a desktop password manager, Studio reads passwords from a console.
-    # Answer only its known signing prompts; never save passwords to the SDK.
-    master, slave = pty.openpty()
-    attributes = termios.tcgetattr(slave)
-    attributes[3] &= ~termios.ECHO
-    termios.tcsetattr(slave, termios.TCSANOW, attributes)
-    process = subprocess.Popen([str(sdk / 'tools/ide/bin/tizen'), 'package', '-t', 'tpk',
-                                '-s', profile, '-o', str(destination), '--', str(package)],
-                               env=env, stdin=slave, stdout=slave, stderr=slave, start_new_session=True)
-    os.close(slave)
-    output, cursor = b'', 0
-    prompts = re.compile(rb'Author password:|Distributor\d* password:|Yes: \(Y\), No: \(N\) \?', re.I)
-    deadline = time.monotonic() + 90
-    try:
-        while time.monotonic() < deadline:
-            ready, _, _ = select.select([master], [], [], 0.5)
-            if ready:
-                try:
-                    block = os.read(master, 65536)
-                except OSError:
-                    break
-                if not block:
-                    break
-                output += block
-                for match in prompts.finditer(output, cursor):
-                    prompt = match.group().lower()
-                    answer = password if prompt.startswith(b'author') else distributor_password if prompt.startswith(b'distributor') else 'N'
-                    os.write(master, (answer + '\n').encode())
-                    cursor = match.end()
-            if process.poll() is not None:
-                break
-        if process.poll() is None:
-            process.wait(timeout=5)
-        if process.returncode or not (destination / package.name).is_file():
-            raise RuntimeError('Tizen Studio did not produce the signed TPK')
-    finally:
-        if process.poll() is None:
-            os.killpg(process.pid, signal.SIGTERM)
-            process.wait(timeout=5)
-        os.close(master)
-        print(redact(output.decode(errors='replace')), flush=True)
-
-
 try:
-    # Each CI build gets a disposable author key outside the checkout. Secure
-    # stable Samsung profiles belong in a separate device/release signing flow.
+    # Keep both disposable SDK keys and configured Samsung keys outside source.
     with tempfile.TemporaryDirectory(prefix='streamed-tizen-signing-') as temporary:
         signing = Path(temporary)
         environment = {name: value for name, value in os.environ.items() if name not in signing_names}
@@ -119,20 +67,7 @@ try:
         run(['dotnet', 'build', 'apps/tizen-dotnet/StreamedTv.csproj', '-c', 'Release'], environment, 300)
         packages = list((root / 'apps/tizen-dotnet/bin/Release/tizen90').glob('*.tpk'))
         if len(packages) != 1:
-            raise RuntimeError('Expected one fresh TPK before Studio signing')
-        profile = 'StreamedDevelopment' + secrets.token_hex(6)
-        try:
-            run([sdk / 'tools/ide/bin/tizen', 'security-profiles', 'add', '-n', profile,
-                 '-a', signing / 'author.p12', '-p', password, '-d', distributor,
-                 '-dp', distributor_password, '-f'], environment, 60)
-            destination = signing / 'packages'
-            destination.mkdir()
-            package_with_sdk(packages[0], destination, profile, environment)
-            staged = packages[0].with_suffix('.tpk.signed')
-            shutil.copyfile(destination / packages[0].name, staged)
-            staged.replace(packages[0])
-        finally:
-            run([sdk / 'tools/ide/bin/tizen', 'security-profiles', 'remove', '-n', profile], environment, 60)
+            raise RuntimeError('Expected one freshly signed TPK')
 except Exception as error:
     print('::error::' + redact(str(error)), file=sys.stderr)
     sys.exit(1)
