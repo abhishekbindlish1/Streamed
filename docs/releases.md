@@ -14,7 +14,7 @@ Download `streamed-web-vVERSION.zip` and `SHA256SUMS` from
 Keep both files in the same folder and verify the ZIP before extraction:
 
 ```sh
-sha256sum --check SHA256SUMS
+sha256sum --check --ignore-missing SHA256SUMS
 unzip streamed-web-v1.1.0-preview.1.zip -d streamed-web
 cd streamed-web
 python3 -m http.server 8080
