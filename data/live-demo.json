@@ -1,0 +1,172 @@
+{
+  "sports": [
+    {
+      "id": "cricket",
+      "name": "Cricket"
+    },
+    {
+      "id": "football",
+      "name": "Football"
+    },
+    {
+      "id": "basketball",
+      "name": "Basketball"
+    },
+    {
+      "id": "tennis",
+      "name": "Tennis"
+    }
+  ],
+  "matches": [
+    {
+      "id": "live-football-1",
+      "sport": "football",
+      "competition": "Live Test League",
+      "title": "Red City vs Blue United",
+      "startTime": "2026-05-07T20:00:00+02:00",
+      "status": "live",
+      "streams": [
+        {
+          "label": "Local browser MP4 test stream",
+          "type": "mp4",
+          "url": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+        },
+        {
+          "label": "Primary HLS test stream",
+          "type": "hls",
+          "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+        },
+        {
+          "label": "Alternate HLS test stream",
+          "type": "hls",
+          "url": "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8"
+        }
+      ]
+    },
+    {
+      "id": "live-football-2",
+      "sport": "football",
+      "competition": "Live Test Cup",
+      "title": "East Rovers vs West Athletic",
+      "startTime": "2026-05-07T21:15:00+02:00",
+      "status": "live",
+      "streams": [
+        {
+          "label": "Local browser MP4 test stream",
+          "type": "mp4",
+          "url": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+        },
+        {
+          "label": "Backup HLS test stream",
+          "type": "hls",
+          "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+        }
+      ]
+    },
+    {
+      "id": "live-football-3",
+      "sport": "football",
+      "competition": "Night Match",
+      "title": "Harbor FC vs Mountain FC",
+      "startTime": "2026-05-07T22:00:00+02:00",
+      "status": "live",
+      "streams": [
+        {
+          "label": "Local browser MP4 test stream",
+          "type": "mp4",
+          "url": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+        },
+        {
+          "label": "Main HLS test stream",
+          "type": "hls",
+          "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+        }
+      ]
+    },
+    {
+      "id": "live-cricket-1",
+      "sport": "cricket",
+      "competition": "Live Cricket Test",
+      "title": "Northern XI vs Coastal XI",
+      "startTime": "2026-05-07T19:30:00+02:00",
+      "status": "live",
+      "streams": [
+        {
+          "label": "Local browser MP4 test stream",
+          "type": "mp4",
+          "url": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+        },
+        {
+          "label": "Cricket primary HLS test stream",
+          "type": "hls",
+          "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+        },
+        {
+          "label": "Cricket alternate HLS test stream",
+          "type": "hls",
+          "url": "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8"
+        }
+      ]
+    },
+    {
+      "id": "live-cricket-2",
+      "sport": "cricket",
+      "competition": "T20 Test Night",
+      "title": "Metro Strikers vs Valley Kings",
+      "startTime": "2026-05-07T20:45:00+02:00",
+      "status": "live",
+      "streams": [
+        {
+          "label": "Local browser MP4 test stream",
+          "type": "mp4",
+          "url": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+        },
+        {
+          "label": "Cricket HLS test stream",
+          "type": "hls",
+          "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+        }
+      ]
+    },
+    {
+      "id": "live-basketball-1",
+      "sport": "basketball",
+      "competition": "Demo Cup",
+      "title": "North City vs South City",
+      "startTime": "2026-05-07T21:30:00+02:00",
+      "status": "live",
+      "streams": [
+        {
+          "label": "Local browser MP4 test stream",
+          "type": "mp4",
+          "url": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+        },
+        {
+          "label": "Basketball HLS test stream",
+          "type": "hls",
+          "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+        }
+      ]
+    },
+    {
+      "id": "live-tennis-1",
+      "sport": "tennis",
+      "competition": "Demo Open",
+      "title": "Court One Singles",
+      "startTime": "2026-05-07T18:15:00+02:00",
+      "status": "live",
+      "streams": [
+        {
+          "label": "Local browser MP4 test stream",
+          "type": "mp4",
+          "url": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+        },
+        {
+          "label": "Tennis HLS test stream",
+          "type": "hls",
+          "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+# Local configuration and credentials
+/data/config.local.js
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+.trust-anchor/
+
+# Generated Team Hub data
+/data/team-backfill.json
+/data/team-standings-cache.json
+
+# Dependencies and logs
+node_modules/
+*.log
+
+# Tizen build and signing outputs
+/Build/
+/Debug/
+/Release/
+/Test/
+/.buildResult/
+/.package/
+/.sign/
+*.wgt
+
+# Editor and operating-system metadata
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,54 @@
+{
+  "sports": [
+    { "id": "football", "name": "Football" },
+    { "id": "basketball", "name": "Basketball" },
+    { "id": "tennis", "name": "Tennis" },
+    { "id": "cricket", "name": "Cricket" }
+  ],
+  "matches": [
+    {
+      "id": "demo-football-1",
+      "sport": "football",
+      "competition": "Demo League",
+      "title": "Home FC vs Away FC",
+      "startTime": "2026-05-07T19:00:00+02:00",
+      "status": "live",
+      "streams": [
+        {
+          "label": "Authorized HLS demo",
+          "type": "hls",
+          "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+        },
+        {
+          "label": "Alternate authorized HLS demo",
+          "type": "hls",
+          "url": "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8"
+        }
+      ]
+    },
+    {
+      "id": "demo-basketball-1",
+      "sport": "basketball",
+      "competition": "Demo Cup",
+      "title": "North City vs South City",
+      "startTime": "2026-05-07T21:30:00+02:00",
+      "status": "scheduled",
+      "streams": []
+    },
+    {
+      "id": "demo-cricket-1",
+      "sport": "cricket",
+      "competition": "Demo Cricket Series",
+      "title": "City XI vs County XI",
+      "startTime": "2026-05-08T16:00:00+02:00",
+      "status": "scheduled",
+      "streams": [
+        {
+          "label": "Cricket authorized HLS demo",
+          "type": "hls",
+          "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img">
+  <defs>
+    <linearGradient id="bg" x1="24" y1="18" x2="226" y2="238" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff0ba"/>
+      <stop offset="0.42" stop-color="#f5c451"/>
+      <stop offset="1" stop-color="#513b05"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000" flood-opacity=".38"/>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="58" fill="url(#bg)"/>
+  <circle cx="72" cy="58" r="36" fill="#fff" opacity=".28"/>
+  <circle cx="202" cy="52" r="18" fill="#fff" opacity=".34"/>
+  <g filter="url(#shadow)" transform="rotate(16 128 132)">
+    <rect x="72" y="64" width="112" height="128" rx="38" fill="#080808" opacity=".24"/>
+    <circle cx="105" cy="114" r="11" fill="#fff" opacity=".86"/>
+    <circle cx="151" cy="114" r="11" fill="#fff" opacity=".86"/>
+    <path d="M98 151c18 18 42 18 60 0" fill="none" stroke="#fff" stroke-width="13" stroke-linecap="round" opacity=".82"/>
+  </g>
+  <text x="128" y="225" text-anchor="middle" font-family="Arial, sans-serif" font-size="44" font-weight="900" fill="#fff" opacity=".92">P</text>
+</svg>
