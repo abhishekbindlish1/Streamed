@@ -12,9 +12,37 @@ import time
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--output', type=Path, required=True)
 parser.add_argument('--size', default='2560x1440')
+parser.add_argument('--verify-only', action='store_true')
 parser.add_argument('command', nargs=argparse.REMAINDER)
 args = parser.parse_args()
 command = args.command[1:] if args.command[:1] == ['--'] else args.command
+
+
+def verify_recording():
+    probe = subprocess.run([
+        'ffprobe', '-v', 'error', '-select_streams', 'v:0', '-count_frames',
+        '-show_entries', 'stream=width,height,nb_read_frames:format=duration', '-of', 'json', str(args.output)
+    ], capture_output=True, text=True, check=True)
+    info = json.loads(probe.stdout)
+    if not info.get('streams') or float(info['format'].get('duration', '0')) <= 0:
+        raise RuntimeError('The SDK session recording contains no playable video')
+    stream = info['streams'][0]
+    if int(stream.get('nb_read_frames', '0')) <= 0:
+        raise RuntimeError('The SDK session recording contains no decoded frames')
+    print(f"::notice::SDK session video: {args.output} ({stream['width']}x{stream['height']}, {float(info['format']['duration']):.1f}s, {stream['nb_read_frames']} frames). Download the job's results artifact to watch it.", flush=True)
+
+
+if args.verify_only:
+    try:
+        verify_recording()
+    except Exception as error:
+        print('::error::Display recording verification: ' + str(error), file=sys.stderr)
+        log = args.output.with_suffix('.ffmpeg.log')
+        if log.exists():
+            print('::notice::Recorder log: ' + log.read_text(errors='replace')[-2200:].replace('%', '%25').replace('\n', '%0A'), flush=True)
+        sys.exit(1)
+    sys.exit(0)
+
 if not command or not os.environ.get('DISPLAY'):
     parser.error('Run under Xvfb with a command after --')
 if not shutil.which('ffmpeg') or not shutil.which('ffprobe'):
@@ -33,7 +61,7 @@ try:
             '-c:v', 'libx264', '-threads', '1', '-preset', 'veryfast', '-crf', '28',
             '-pix_fmt', 'yuv420p', '-movflags', '+frag_keyframe+empty_moov+default_base_moof',
             '-t', '600', str(args.output)
-        ], stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=log)
+        ], stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=log, start_new_session=True)
         deadline = time.monotonic() + 10
         while not args.output.exists() and recorder.poll() is None and time.monotonic() < deadline:
             time.sleep(0.05)
@@ -50,15 +78,7 @@ try:
                     recorder.wait(timeout=5)
         if recorder.returncode:
             raise RuntimeError('Display recorder failed; see its ffmpeg log')
-        probe = subprocess.run([
-            'ffprobe', '-v', 'error', '-select_streams', 'v:0',
-            '-show_entries', 'stream=width,height:format=duration', '-of', 'json', str(args.output)
-        ], capture_output=True, text=True, check=True)
-        info = json.loads(probe.stdout)
-        if not info.get('streams') or float(info['format'].get('duration', '0')) <= 0:
-            raise RuntimeError('The SDK session recording contains no playable video')
-        stream = info['streams'][0]
-        print(f"::notice::SDK session video: {args.output} ({stream['width']}x{stream['height']}, {float(info['format']['duration']):.1f}s). Download the job's results artifact to watch it.", flush=True)
+        verify_recording()
 except Exception as error:
     print('::error::Display recording: ' + str(error), file=sys.stderr)
     if status == 0:

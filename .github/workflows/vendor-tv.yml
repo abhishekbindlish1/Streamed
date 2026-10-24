@@ -65,6 +65,9 @@ jobs:
           python3 scripts/record-tv-display.py
           --output test-results/webos-simulator/lg-session.mp4
           -- node scripts/webos-simulator-smoke.js
+      - name: Verify the LG recording is viewable
+        if: always()
+        run: python3 scripts/record-tv-display.py --verify-only --output test-results/webos-simulator/lg-session.mp4
       - uses: actions/upload-artifact@v6
         if: always()
         with:
@@ -124,6 +127,9 @@ jobs:
           /usr/bin/python3 scripts/record-tv-display.py
           --output test-results/tizen-emulator/samsung-session.mp4
           -- /usr/bin/python3 scripts/tizen-runtime-smoke.py
+      - name: Verify the Samsung recording is viewable after success or failure
+        if: always()
+        run: python3 scripts/record-tv-display.py --verify-only --output test-results/tizen-emulator/samsung-session.mp4
       - uses: actions/upload-artifact@v6
         if: always()
         with:
