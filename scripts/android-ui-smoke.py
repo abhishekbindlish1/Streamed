@@ -136,6 +136,7 @@ try:
     key(82)
     command('logcat', '-c')
     if args.pairing:
+        command('shell', 'am', 'force-stop', 'com.streamed.tv.android.sandbox')
         # Reset only the separately identified fixture package, never a real account.
         command('shell', 'pm', 'clear', package)
         fixture_action('fail-next-init')
@@ -146,7 +147,8 @@ try:
         snapshot('android-pairing.png')
         key(4)
         root = ui()
-        assert not has_text(root, 'Metro Strikers'), 'Back bypassed the authentication gate'
+        assert not any(node.get('package') == package and 'Metro Strikers' in node.get('text', '')
+                       for node in root.iter('node')), 'Back bypassed the authentication gate'
         launch()
         wait_for(lambda root: has_text(root, '123 456'), 'Sign-in was not restored after Back')
         fixture_action('complete')

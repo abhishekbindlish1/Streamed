@@ -66,7 +66,7 @@ native_acceleration=auto
 if [[ ! -r /dev/kvm || ! -w /dev/kvm ]]; then native_acceleration=off; fi
 "$native_sdk/emulator/emulator" -avd "$native_avd" -port "$native_port" \
   -read-only -accel "$native_acceleration" -no-window -no-audio -no-boot-anim \
-  -no-snapshot -gpu swiftshader_indirect -feature -Vulkan \
+  -no-snapshot -gpu "${ANDROID_EMULATOR_GPU:-software}" -feature -Vulkan \
   > "$native_output/emulator.log" 2>&1 &
 native_emulator_pid=$!
 native_deadline=$((SECONDS + ${ANDROID_BOOT_TIMEOUT:-360}))

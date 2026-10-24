@@ -126,12 +126,14 @@ jobs:
             width: 720
             height: 1280
             density: 240
+            ram: 2048
           - name: android-tv-api36
             api: 36
             target: android-tv
             width: 1280
             height: 720
             density: 160
+            ram: 3072
     steps:
       - uses: actions/checkout@v6
       - name: Free space for the system image and emulator
@@ -163,7 +165,7 @@ jobs:
           sed -i -E '/^(hw\.(cpu\.ncore|ramSize|lcd\.(width|height|density))|disk\.dataPartition\.size)[[:space:]]*=/d' "$ANDROID_AVD_HOME/StreamedCi.avd/config.ini"
           cat >> "$ANDROID_AVD_HOME/StreamedCi.avd/config.ini" <<'CONFIG'
           hw.cpu.ncore=2
-          hw.ramSize=2048
+          hw.ramSize=${{ matrix.ram }}
           hw.lcd.width=${{ matrix.width }}
           hw.lcd.height=${{ matrix.height }}
           hw.lcd.density=${{ matrix.density }}
