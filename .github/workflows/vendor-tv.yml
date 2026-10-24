@@ -39,6 +39,10 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - name: Install session recording tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
       - name: Prepare the official LG Simulator
         run: python3 scripts/setup-tv-sdks.py webos --root "$RUNNER_TEMP/tv-sdk" --cache "$RUNNER_TEMP/tv-downloads"
       - name: Build the LG development IPK
@@ -56,7 +60,11 @@ jobs:
           ar p incoming/webos/*.ipk data.tar.gz | tar -xz -C "$RUNNER_TEMP/webos-package"
           cp -a "$RUNNER_TEMP/webos-package/usr/palm/applications/com.streamed.tv.webos.preview/." apps/webos/dist/app/
       - name: Test in LG's actual Simulator
-        run: xvfb-run -a -s '-screen 0 2560x1440x24' node scripts/webos-simulator-smoke.js
+        run: >-
+          xvfb-run -a -s '-screen 0 2560x1440x24'
+          python3 scripts/record-tv-display.py
+          --output test-results/webos-simulator/lg-session.mp4
+          -- node scripts/webos-simulator-smoke.js
       - uses: actions/upload-artifact@v6
         if: always()
         with:
@@ -85,7 +93,7 @@ jobs:
       - name: Prepare VM acceleration and display dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb python3-pil libgtk2.0-0t64 libasound2t64 libxcb-xinerama0 libxss1 libpulse0 mesa-utils libsdl1.2debian libv4l-0 libxcb-icccm4 libxcb-image0 libxcb-render-util0 libx11-xcb1 libxkbcommon-x11-0 libsm6 libice6 libxext6 libxi6 libxcb-util1 libfreetype6 libfontconfig1 libxcb-shape0
+          sudo apt-get install -y xvfb ffmpeg python3-pil libgtk2.0-0t64 libasound2t64 libxcb-xinerama0 libxss1 libpulse0 mesa-utils libsdl1.2debian libv4l-0 libxcb-icccm4 libxcb-image0 libxcb-render-util0 libx11-xcb1 libxkbcommon-x11-0 libsm6 libice6 libxext6 libxi6 libxcb-util1 libfreetype6 libfontconfig1 libxcb-shape0
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
@@ -111,7 +119,11 @@ jobs:
           name: tizen-distribution
           path: apps/tizen-dotnet/bin/Release/tizen90/
       - name: Install and launch the native TPK in Samsung TV 10
-        run: xvfb-run -a -s '-screen 0 2560x1440x24' /usr/bin/python3 scripts/tizen-runtime-smoke.py
+        run: >-
+          xvfb-run -a -s '-screen 0 2560x1440x24'
+          /usr/bin/python3 scripts/record-tv-display.py
+          --output test-results/tizen-emulator/samsung-session.mp4
+          -- /usr/bin/python3 scripts/tizen-runtime-smoke.py
       - uses: actions/upload-artifact@v6
         if: always()
         with:

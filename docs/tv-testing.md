@@ -17,6 +17,25 @@ client. The LG app shares `apps/web`, adds its own manifest and produces an IPK
 with `npm run build:webos`. An APK or TPK cannot be installed into LG's Simulator.
 The LG preview includes owned sample media and works without a backend account.
 
+## Watch without installing an emulator locally
+
+Open [LG and Samsung runtime checks](https://github.com/abhishekbindlish1/Streamed/actions/workflows/vendor-tv.yml),
+choose a run, and download `lg-simulator-results` or `samsung-emulator-results`
+from **Artifacts**. Each SDK session now includes a normal MP4 recording
+(`lg-session.mp4` / `samsung-session.mp4`), screenshots and logs. Open the MP4 in
+your browser or video player; no local SDK or emulator is needed. These private
+repository artifacts require repository access and are retained for seven days.
+The recording also covers failed installation, so a Samsung recording may show
+the TV launcher while signing is unresolved. A recording is not interactive.
+
+For interactive control, run the emulator on a Linux host with working KVM and
+provide an authenticated browser desktop (for example noVNC over a private VPN).
+The same approach works for an accelerated Android emulator; LG's Simulator does
+not need KVM. This cloud workspace has no KVM, so it cannot host the current
+Samsung VM. No live browser desktop has been provisioned. A private manual CI
+debugging session or a dedicated KVM-capable host would be a separate setup;
+GitHub Actions' normal run page does not expose a live desktop.
+
 ## Android checks
 
 `native.yml` builds the APKs once, verifies their signatures, then runs the same
@@ -98,6 +117,20 @@ four repository secrets documented in the [native README](../apps/tizen-dotnet/R
 The SDK job records its emulator DUID when available so the profile can include
 that target. Keys are decoded into private temporary files and removed after
 building. No private profile is committed or included in a release.
+
+If a package already installs on your TV, compare that package's public signing
+metadata before replacing certificates:
+
+```sh
+node scripts/inspect-tv-signing.js /path/to/working.tpk
+```
+
+This also accepts a `.wgt`. It reports certificate/key fingerprints, issuers and
+dates without reading private keys or printing the author's subject/email. The
+author key identifies the app publisher; keep the working author identity for
+updates to an installed app. A distributor profile may authorize particular
+devices. CI currently uses a disposable generic SDK identity when no profile is
+supplied, so a CI rejection does not establish that your local profile is broken.
 
 The TV CLI reaches this image's installer; the generic `sdb install` command
 returned without installing the app. The test therefore verifies installation,
