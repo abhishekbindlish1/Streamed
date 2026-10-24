@@ -13,7 +13,7 @@ output = root / 'test-results/tizen-emulator'
 output.mkdir(parents=True, exist_ok=True)
 sdk = Path(os.environ['TIZEN_SDK_DIRECTORY'])
 data = Path(os.environ['TIZEN_SDK_DATA_DIRECTORY'])
-env = {**os.environ, 'JAVA_TOOL_OPTIONS': '-Duser.home=' + str(data / 'user')}
+env = {**os.environ, 'JAVA_TOOL_OPTIONS': '-Duser.home=' + str(data / 'user'), 'QT_QPA_PLATFORM': 'xcb', 'QT_DEBUG_PLUGINS': '1'}
 emcli = sdk / 'tools/emulator/bin/em-cli'
 tizen = sdk / 'tools/ide/bin/tizen'
 sdb = sdk / 'tools/sdb'
@@ -72,7 +72,9 @@ except Exception as error:
             print('::notice::Samsung ' + name + ': ' + text.replace('%', '%25').replace('\n', '%0A'), flush=True)
     for path in list(data.rglob('*.log'))[-6:]:
         if 'emulator' in str(path):
-            text = path.read_text(errors='replace')[-3500:]
+            full = path.read_text(errors='replace')
+            important = [line for line in full.splitlines() if any(word in line.lower() for word in ['could not', 'cannot', 'not found', 'failed', 'xcb', 'plugin'])]
+            text = '\n'.join(important[-22:]) + '\n' + full[-1800:]
             print('::notice::Samsung VM log: ' + text.replace('%', '%25').replace('\n', '%0A'), flush=True)
     try:
         ImageGrab.grab(xdisplay=os.environ.get('DISPLAY')).save(output / 'tizen-runtime-failure.png')

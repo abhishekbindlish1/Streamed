@@ -62,7 +62,7 @@ jobs:
       - name: Prepare VM acceleration and display dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb python3-pil libgtk2.0-0t64 libasound2t64 libxcb-xinerama0 libxss1 libpulse0 mesa-utils libsdl1.2debian libv4l-0
+          sudo apt-get install -y xvfb python3-pil libgtk2.0-0t64 libasound2t64 libxcb-xinerama0 libxss1 libpulse0 mesa-utils libsdl1.2debian libv4l-0 libxcb-icccm4 libxcb-image0 libxcb-render-util0 libx11-xcb1 libxkbcommon-x11-0
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
@@ -71,6 +71,7 @@ jobs:
           mkdir -p test-results/tizen-emulator
           streamed_emulator_bin="$TIZEN_SDK_DIRECTORY/platforms/tizen-10.0/tv-samsung/emulator/bin"
           LD_LIBRARY_PATH="$streamed_emulator_bin" ldd "$streamed_emulator_bin/emulator-x86_64" > test-results/tizen-emulator/shared-libraries.log
+          LD_LIBRARY_PATH="$streamed_emulator_bin" ldd "$streamed_emulator_bin/platforms/libqxcb.so" >> test-results/tizen-emulator/shared-libraries.log
           if grep 'not found' test-results/tizen-emulator/shared-libraries.log; then
             echo '::error::The Samsung emulator is missing runtime libraries'
             exit 1
