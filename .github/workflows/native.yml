@@ -116,6 +116,7 @@ jobs:
           hw.lcd.width=1280
           hw.lcd.height=720
           hw.lcd.density=160
+          disk.dataPartition.size=2147483648
           CONFIG
           bash scripts/android-ci-smoke.sh StreamedCi
       - uses: actions/upload-artifact@v6

@@ -60,7 +60,7 @@ and uploads screenshots. This cloud machine uses slow software emulation, which
 can show Android system ANRs during startup; those are distinct from app errors
 or a successful rendering check.
 
-CI creates a 1280×720 API 28 AVD with the official SDK tools, then runs
+CI creates a 1280×720 API 28 AVD with a 2 GB data partition using the official SDK tools, then runs
 `bash scripts/android-ci-smoke.sh StreamedCi`. This starts a disposable read-only
 emulator, checks boot within a deadline, installs the sandbox APK, and runs the
 rendering assertion. It starts and stops its own fixture server and emulator;

@@ -10,12 +10,12 @@ Browser ZIPs are not TV installers; see [TV installation](tizen.md).
 Download `streamed-web-vVERSION.zip` and `SHA256SUMS` from
 [GitHub Releases](https://github.com/abhishekbindlish1/Streamed/releases).
 `v1.0.0` is the original browser-only release. All-platform downloads start with
-`v1.1.0-preview.1`. Preview tags are published as prereleases.
+`v1.1.0-preview.2`. Preview tags are published as prereleases.
 Keep both files in the same folder and verify the ZIP before extraction:
 
 ```sh
 sha256sum --check --ignore-missing SHA256SUMS
-unzip streamed-web-v1.1.0-preview.1.zip -d streamed-web
+unzip streamed-web-v1.1.0-preview.2.zip -d streamed-web
 cd streamed-web
 python3 -m http.server 8080
 ```
@@ -49,12 +49,12 @@ under a subpath, such as `/Streamed/`; CI exercises that exact layout.
 ## Publish a version
 
 1. Update `version` in `apps/web/package.json` and the root `package-lock.json` together, and commit
-   the change. For a preview, use a version such as `1.1.0-preview.1`.
+   the change. For a preview, use a version such as `1.1.0-preview.2`.
 2. Push the commit, then create and push its matching tag:
 
    ```sh
-   git tag v1.1.0-preview.1
-   git push origin v1.1.0-preview.1
+   git tag v1.1.0-preview.2
+   git push origin v1.1.0-preview.2
    ```
 
 3. GitHub Actions runs all tests, checks that the tag matches the package version,
