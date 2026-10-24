@@ -3,6 +3,7 @@ using global::Android.Runtime;
 using global::Android.Views;
 using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;
+using Microsoft.Maui.Graphics;
 
 namespace StreamedTv.Platforms.Android;
 
@@ -12,6 +13,31 @@ namespace StreamedTv.Platforms.Android;
 // to exceed their viewport and rotation/split-screen use the current dimensions.
 public sealed class BoundedPageHandler : PageHandler
 {
+    private Size Viewport()
+    {
+        var decor = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity?.Window?.DecorView;
+        var metrics = Context.Resources?.DisplayMetrics;
+        var density = metrics?.Density ?? 1;
+        return new Size((decor?.Width > 0 ? decor.Width : metrics?.WidthPixels ?? 0) / density,
+            (decor?.Height > 0 ? decor.Height : metrics?.HeightPixels ?? 0) / density);
+    }
+
+    private static double Finite(double value, double limit) =>
+        limit > 0 && (!double.IsFinite(value) || value > limit) ? limit : value;
+
+    public override Size GetDesiredSize(double widthConstraint, double heightConstraint)
+    {
+        var viewport = Viewport();
+        var desired = base.GetDesiredSize(Finite(widthConstraint, viewport.Width), Finite(heightConstraint, viewport.Height));
+        return new Size(Finite(desired.Width, viewport.Width), Finite(desired.Height, viewport.Height));
+    }
+
+    public override void PlatformArrange(Rect frame)
+    {
+        var viewport = Viewport();
+        base.PlatformArrange(new Rect(frame.X, frame.Y, Finite(frame.Width, viewport.Width), Finite(frame.Height, viewport.Height)));
+    }
+
     protected override ContentViewGroup CreatePlatformView()
     {
         var view = new BoundedPageView(Context) { CrossPlatformLayout = VirtualView };
@@ -38,6 +64,16 @@ public sealed class BoundedPageView : ContentViewGroup
             global::Android.Util.Log.Info("StreamedTv", $"Constrained page layout {MeasuredWidth}x{MeasuredHeight} to window {width}x{height}");
             SetMeasuredDimension(Math.Min(MeasuredWidth, width), Math.Min(MeasuredHeight, height));
         }
+    }
+
+    protected override void OnLayout(bool changed, int left, int top, int right, int bottom)
+    {
+        var decor = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity?.Window?.DecorView;
+        var width = decor?.Width > 0 ? decor.Width : Resources?.DisplayMetrics?.WidthPixels ?? 0;
+        var height = decor?.Height > 0 ? decor.Height : Resources?.DisplayMetrics?.HeightPixels ?? 0;
+        base.OnLayout(changed, left, top,
+            width > 0 ? left + Math.Min(right - left, width) : right,
+            height > 0 ? top + Math.Min(bottom - top, height) : bottom);
     }
 
     private static int Bound(int spec, int viewport)
