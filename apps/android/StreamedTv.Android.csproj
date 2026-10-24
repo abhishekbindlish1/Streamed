@@ -20,8 +20,16 @@
   <Target Name="RejectReleaseSandbox" BeforeTargets="PrepareForBuild" Condition="'$(SandboxMode)' == 'true' and '$(Configuration)' != 'Debug'">
     <Error Text="Sandbox mode is only allowed for Debug builds." />
   </Target>
+  <PropertyGroup Condition="'$(SandboxPairing)' == 'true'">
+    <DefineConstants>$(DefineConstants);SANDBOX_PAIRING</DefineConstants>
+    <ApplicationId>com.streamed.tv.android.sandbox.pairing</ApplicationId>
+  </PropertyGroup>
+  <Target Name="RejectInvalidPairingFixture" BeforeTargets="PrepareForBuild" Condition="'$(SandboxPairing)' == 'true' and ('$(SandboxMode)' != 'true' or '$(Configuration)' != 'Debug')">
+    <Error Text="Pairing fixtures require an explicit Debug sandbox build." />
+  </Target>
   <ItemGroup>
     <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.120" />
+    <PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
   </ItemGroup>
   <ItemGroup>

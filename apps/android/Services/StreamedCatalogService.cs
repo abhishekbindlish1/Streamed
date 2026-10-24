@@ -22,6 +22,7 @@ namespace StreamedTv.Services
         /// instead of falling back to bundled data, since stale demo content was misleading
         /// users into thinking streams were available when the upstream catalog was actually empty.</summary>
         public string LastNetworkError { get; private set; }
+        public bool LastRequestFailed { get; private set; }
 
         public StreamedCatalogService(HttpClient http = null)
         {
@@ -69,11 +70,13 @@ namespace StreamedTv.Services
 
         public async Task<IReadOnlyList<Sport>> GetSportsAsync(CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             return await GetOrLoadAsync("sports", async () =>
             {
                 try
                 {
                     var sports = await GetArrayAsync<Sport>(StreamedEndpoints.Sports(), "sports", cancellationToken);
+                    LastRequestFailed = false;
                     if (sports.Count > 0)
                     {
                         LastNetworkError = null;
@@ -81,8 +84,10 @@ namespace StreamedTv.Services
                     }
                     LastNetworkError = "API returned 0 sports";
                 }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
                 catch (Exception ex)
                 {
+                    LastRequestFailed = true;
                     LastNetworkError = "GetSports: " + ex.GetType().Name + ": " + ex.Message;
                     AppLog.Error("StreamedTv", "GetSportsAsync failed: " + ex.GetType().Name + ": " + ex.Message);
                 }
@@ -105,6 +110,7 @@ namespace StreamedTv.Services
 
         public async Task<IReadOnlyList<CatalogMatch>> GetMatchesBySportAsync(string sport, IEnumerable<string> favoriteTeams, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var cacheKey = "matches:" + sport;
             var matches = await GetOrLoadAsync(cacheKey, async () =>
             {
@@ -112,6 +118,7 @@ namespace StreamedTv.Services
                 {
                     var apiMatches = await GetArrayAsync<ApiMatch>(StreamedEndpoints.MatchesBySport(sport), "matches", cancellationToken);
                     var mapped = apiMatches.Select(m => MapApiMatch(m, null)).ToList();
+                    LastRequestFailed = false;
                     if (mapped.Count > 0)
                     {
                         LastNetworkError = null;
@@ -119,8 +126,10 @@ namespace StreamedTv.Services
                     }
                     LastNetworkError = "API returned 0 matches for " + sport;
                 }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
                 catch (Exception ex)
                 {
+                    LastRequestFailed = true;
                     LastNetworkError = "GetMatches(" + sport + "): " + ex.GetType().Name + ": " + ex.Message;
                     AppLog.Error("StreamedTv", "GetMatchesBySportAsync(" + sport + ") failed: " + ex.GetType().Name + ": " + ex.Message);
                 }
@@ -133,6 +142,7 @@ namespace StreamedTv.Services
 
         public async Task<IReadOnlyList<CatalogMatch>> GetLiveMatchesAsync(IEnumerable<string> favoriteTeams, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var matches = await GetOrLoadAsync("matches:live", async () =>
             {
                 try
@@ -144,6 +154,7 @@ namespace StreamedTv.Services
                         return mapped;
                     }
                 }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
                 catch (Exception ex)
                 {
                     AppLog.Error("StreamedTv", "GetLiveMatchesAsync failed: " + ex.GetType().Name + ": " + ex.Message);
@@ -157,6 +168,7 @@ namespace StreamedTv.Services
 
         public async Task<IReadOnlyList<StreamOption>> GetStreamsAsync(CatalogMatch match, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             // Stream URLs from streamed.pk include short-lived signed manifest tokens
             // and expire fast (observed ~5-15 min). The player surfaces this as
             // `hls:networkError_manifestParsingError` because the .m3u8 fetch returns
@@ -196,6 +208,7 @@ namespace StreamedTv.Services
                         cancellationToken);
                     resolved.AddRange(sourceStreams);
                 }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
                 catch
                 {
                     // Keep trying the other available source endpoints.
@@ -275,7 +288,10 @@ namespace StreamedTv.Services
             }
 
             var value = await loader();
-            _cache[key] = new CacheEntry(value);
+            // A failed or cancelled load must be retryable immediately. Empty
+            // results also need refreshing when a sport's catalog becomes available.
+            if (value.Count > 0) _cache[key] = new CacheEntry(value);
+            else _cache.Remove(key);
             return value;
         }
 

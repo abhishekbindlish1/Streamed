@@ -12,6 +12,7 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.0.2" PrivateAssets="all" />
     <Compile Include="../../apps/android/Models/ApiModels.cs" Link="Product/ApiModels.cs" />
     <Compile Include="../../apps/android/Services/StreamedEndpoints.cs" Link="Product/StreamedEndpoints.cs" />
+    <Compile Include="../../apps/android/Services/PlaybackTarget.cs" Link="Product/PlaybackTarget.cs" />
     <Compile Include="../../apps/android/Services/StreamRanker.cs" Link="Product/StreamRanker.cs" />
     <Compile Include="../../apps/android/Services/StreamedCatalogService.cs" Link="Product/StreamedCatalogService.cs" />
   </ItemGroup>

@@ -8,6 +8,7 @@ native_output="${SCREENSHOT_DIR:-test-results/android}"
 native_port="${ANDROID_EMULATOR_PORT:-5554}"
 native_avd="${1:?Pass the name of a prepared Android AVD}"
 native_apk=apps/android/bin/Debug/net10.0-android/android-x64/com.streamed.tv.android.sandbox-Signed.apk
+native_pairing_apk=apps/android/bin/Debug/net10.0-android/android-x64/com.streamed.tv.android.sandbox.pairing-Signed.apk
 native_emulator_pid=
 native_server_pid=
 export ANDROID_SERIAL="emulator-$native_port"
@@ -17,7 +18,7 @@ cleanup() {
   native_result=$?
   trap - EXIT
   if (( native_result != 0 )); then
-    timeout 10 "$native_adb" logcat -d -s AndroidRuntime:E > "$native_output/android-runtime.log" 2>&1 || true
+    timeout 10 "$native_adb" logcat -d -s AndroidRuntime:E StreamedTv:I ExoPlayerImpl:W > "$native_output/android-runtime.log" 2>&1 || true
     for native_log in emulator sandbox android-runtime; do
       if [[ -f "$native_output/$native_log.log" ]]; then
         tail -n 60 "$native_output/$native_log.log"
@@ -51,7 +52,7 @@ if "$native_adb" devices | awk 'NR > 1 {print $1}' | grep -qx "$ANDROID_SERIAL";
   exit 1
 fi
 if [[ "${ANDROID_FIXTURE_SERVER_RUNNING:-false}" != true ]]; then
-  node scripts/sandbox.js > "$native_output/sandbox.log" 2>&1 &
+  SANDBOX_PAIRING_FIXTURE=true node scripts/sandbox.js > "$native_output/sandbox.log" 2>&1 &
   native_server_pid=$!
 fi
 curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:8080/health |
@@ -91,3 +92,5 @@ for native_setting in window_animation_scale transition_animation_scale animator
 done
 timeout 180 "$native_adb" install -r "$native_apk"
 ADB="$native_adb" SCREENSHOT_DIR="$native_output" bash scripts/android-smoke.sh
+timeout 180 "$native_adb" install -r "$native_pairing_apk"
+ADB="$native_adb" SCREENSHOT_DIR="$native_output" bash scripts/android-smoke.sh --pairing

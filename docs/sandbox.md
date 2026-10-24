@@ -45,7 +45,9 @@ adb install -r apps/android/bin/Debug/net10.0-android/android-x64/com.streamed.t
 Keep `npm run sandbox` running on the emulator host. Android reaches it through
 `10.0.2.2:8080`. This debug APK uses a separate application ID, allows local HTTP,
 skips pairing, and visibly labels sample content. Normal builds keep their auth
-gate. Release builds reject `SandboxMode=true`.
+gate. Release builds reject `SandboxMode=true`. Native fixture APIs serve a local
+generated H.264/AAC MP4 and HLS playlist with byte-range support; native playback
+tests do not depend on an external media provider.
 
 With the APK installed and an emulator running:
 
@@ -53,22 +55,37 @@ With the APK installed and an emulator running:
 bash scripts/android-smoke.sh
 ```
 
-The script launches the app, checks its rendered fixture catalog through UI
-Automator, and captures the real Android screen. Set `ADB` to another ADB binary
+The script launches the app, selects matches using remote keys, checks advancing
+native HLS and MP4 playback, pause/resume and Back through UI Automator, and captures
+the real Android screen. Set `ADB` to another ADB binary
 or `SCREENSHOT_DIR` to change the output folder. CI uses an accelerated emulator
 and uploads screenshots. This cloud machine uses slow software emulation, which
 can show Android system ANRs during startup; those are distinct from app errors
 or a successful rendering check.
 
-CI creates a 1280×720 API 28 AVD with a 2 GB data partition using the official SDK tools, then runs
+CI builds the APKs once, then runs separate API 28 portrait and official Android
+TV API 36 landscape images. Each job creates a 4 GB AVD and runs
 `bash scripts/android-ci-smoke.sh StreamedCi`. This starts a disposable read-only
-emulator, checks boot within a deadline, installs the sandbox APK, and runs the
-rendering assertion. It starts and stops its own fixture server and emulator;
-startup logs and screenshots are retained as workflow artifacts on failure.
+emulator, checks boot within a deadline, and runs playback and pairing assertions.
+It starts and stops its own fixture server and emulator; startup logs, UI XML and
+screenshots are retained as workflow artifacts on failure.
 For an inactive prepared AVD, pass its name instead. Set
 `ANDROID_FIXTURE_SERVER_RUNNING=true` to reuse a running fixture server and
 `ANDROID_EMULATOR_PORT` to select an unused emulator port. The script refuses
 to replace a running emulator on that port.
+
+The CI launcher also needs the isolated pairing APK. Build it with the same
+x64 command plus `-p:SandboxPairing=true`; its package ID ends in `.sandbox.pairing`.
+For manual pairing checks, start the server with
+`SANDBOX_PAIRING_FIXTURE=true npm run sandbox`, install that APK, and run
+`bash scripts/android-smoke.sh --pairing`. The server deliberately fails one
+pairing request, waits for an explicit test completion, and issues an obviously
+fake fixture token. This debug flag is rejected outside an explicit Debug sandbox
+build. It does not configure production authentication or create real accounts.
+
+The cloud's prepared `StreamedAndroidTV` API 36 AVD was checksum-verified but its
+software-only boot did not finish usefully here. Use the hardware-accelerated CI
+matrix for TV checks. See [vendor emulator distinctions](tv-testing.md).
 
 ## Go API and native Tizen
 

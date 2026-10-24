@@ -8,17 +8,16 @@ namespace StreamedTv
         {
             InitializeComponent();
 
-            Routing.RegisterRoute("LoginPage", typeof(LoginPage));
             Routing.RegisterRoute("PlayerPage", typeof(PlayerPage));
-
-            // Auth gate: redirect to login if no JWT stored
-            if (!ServiceLocator.IsSandbox && !ServiceLocator.Auth.IsAuthenticated)
+            CurrentItem = ServiceLocator.RequiresPairing && !ServiceLocator.Auth.IsAuthenticated ? LoginRoot : CatalogRoot;
+            Navigating += (_, args) =>
             {
-                Dispatcher.Dispatch(async () =>
+                if (ServiceLocator.RequiresPairing && !ServiceLocator.Auth.IsAuthenticated)
                 {
-                    await GoToAsync("LoginPage").ConfigureAwait(true);
-                });
-            }
+                    var path = args.Target.Location.OriginalString.Split('?')[0];
+                    if (path.Contains("MainPage", StringComparison.Ordinal) || path.Contains("PlayerPage", StringComparison.Ordinal)) args.Cancel();
+                }
+            };
         }
     }
 }

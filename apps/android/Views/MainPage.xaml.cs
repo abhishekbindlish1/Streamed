@@ -7,7 +7,9 @@ namespace StreamedTv.Views
     {
         private IReadOnlyList<Sport> _sports = Array.Empty<Sport>();
         private string _activeSportId = "";
-        private CancellationTokenSource _cts;
+        private CancellationTokenSource? _cts;
+        private string? _selectedMatchId;
+        private bool _openingStream;
 
         public MainPage()
         {
@@ -20,6 +22,7 @@ namespace StreamedTv.Views
         {
             base.OnAppearing();
             _cts?.Cancel();
+            _cts?.Dispose();
             _cts = new CancellationTokenSource();
             _ = LoadSportsAsync(_cts.Token);
         }
@@ -35,6 +38,7 @@ namespace StreamedTv.Views
             try
             {
                 _sports = await ServiceLocator.Catalog.GetSportsAsync(ct).ConfigureAwait(true);
+                ct.ThrowIfCancellationRequested();
                 if (_sports.Count > 0 && !_sports.Any(sport => sport.Id == _activeSportId))
                     _activeSportId = _sports[0].Id;
                 BuildSportNav();
@@ -42,11 +46,14 @@ namespace StreamedTv.Views
                 {
                     await LoadMatchesAsync(_activeSportId, ct).ConfigureAwait(true);
                 }
+                else ShowMessage(ServiceLocator.Catalog.LastRequestFailed
+                    ? "Could not load sports. Check your connection and try again."
+                    : "No sports are available right now.", retrySports: true);
             }
             catch (OperationCanceledException) { }
             catch
             {
-                ShowMessage("Failed to load sports. Check your connection.");
+                if (!ct.IsCancellationRequested) ShowMessage("Failed to load sports. Check your connection.", retrySports: true);
             }
         }
 
@@ -67,12 +74,14 @@ namespace StreamedTv.Views
                     CommandParameter = sport.Id,
                 };
                 string capturedId = sport.Id;
+                StyleRemoteButton(btn);
                 btn.Clicked += async (_, _) =>
                 {
                     if (_activeSportId == capturedId) return;
                     _activeSportId = capturedId;
                     RefreshSportNavColors();
                     _cts?.Cancel();
+                    _cts?.Dispose();
                     _cts = new CancellationTokenSource();
                     await LoadMatchesAsync(capturedId, _cts.Token).ConfigureAwait(true);
                 };
@@ -97,12 +106,13 @@ namespace StreamedTv.Views
                 var matches = await ServiceLocator.Catalog
                     .GetMatchesBySportAsync(sportId, Array.Empty<string>(), ct)
                     .ConfigureAwait(true);
+                ct.ThrowIfCancellationRequested();
                 BuildMatchList(matches, ct);
             }
             catch (OperationCanceledException) { }
             catch
             {
-                ShowMessage("Failed to load matches.");
+                if (!ct.IsCancellationRequested) ShowMessage("Could not load matches. Check your connection and try again.");
             }
         }
 
@@ -116,7 +126,9 @@ namespace StreamedTv.Views
 
             if (live.Count == 0 && upcoming.Count == 0 && recent.Count == 0)
             {
-                ShowMessage("No matches available.");
+                ShowMessage(ServiceLocator.Catalog.LastRequestFailed
+                    ? "Could not load matches. Check your connection and try again."
+                    : "No matches available right now.");
                 return;
             }
 
@@ -158,51 +170,42 @@ namespace StreamedTv.Views
                 ? match.Title
                 : home + " vs " + away;
 
-            var card = new Border
+            var card = new Button
             {
+                Text = title + "\n" + match.Status.ToUpperInvariant(),
+                AutomationId = "Match_" + match.Id,
+                TextColor = Colors.White,
+                FontSize = 16,
                 HeightRequest = 132,
                 MaximumHeightRequest = 132,
                 VerticalOptions = LayoutOptions.Start,
                 BackgroundColor = Color.FromArgb("#1e1e1e"),
-                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 6 },
-                StrokeThickness = 0,
+                CornerRadius = 6,
+                BorderWidth = 2,
+                BorderColor = Color.FromArgb("#3a3a3a"),
                 Padding = new Thickness(16, 12),
             };
 
-            var stack = new VerticalStackLayout { Spacing = 4 };
-            stack.Children.Add(new Label
-            {
-                Text = title,
-                HeightRequest = 44,
-                MaxLines = 2,
-                TextColor = Colors.White,
-                FontSize = 16,
-            });
-            if (match.Status == "live")
-            {
-                stack.Children.Add(new Label
-                {
-                    Text = "LIVE",
-                    HeightRequest = 20,
-                    TextColor = Color.FromArgb("#ff4444"),
-                    FontSize = 12,
-                    FontAttributes = FontAttributes.Bold,
-                });
-            }
-            card.Content = stack;
-
-            var tapGesture = new TapGestureRecognizer();
-            tapGesture.Tapped += async (_, _) => await OnMatchTappedAsync(match, ct);
-            card.GestureRecognizers.Add(tapGesture);
-
+            StyleRemoteButton(card);
+            card.Clicked += async (_, _) => await OnMatchTappedAsync(match, ct);
+            if (match.Id == _selectedMatchId) card.Loaded += (_, _) => card.Focus();
             MatchList.Children.Add(card);
+        }
+
+        private static void StyleRemoteButton(Button button)
+        {
+            Controls.RemoteButtonStyle.Apply(button);
         }
 
         private async Task OnMatchTappedAsync(CatalogMatch match, CancellationToken ct)
         {
+            if (_openingStream || ct.IsCancellationRequested) return;
+            _openingStream = true;
+            _selectedMatchId = match.Id;
             try
             {
                 var streams = await ServiceLocator.Catalog.GetStreamsAsync(match, ct).ConfigureAwait(true);
+                ct.ThrowIfCancellationRequested();
                 if (streams.Count == 0)
                 {
                     await DisplayAlert("No Streams", "No playable streams found for this match.", "OK").ConfigureAwait(true);
@@ -211,23 +214,27 @@ namespace StreamedTv.Views
 
                 string rawUrl = streams[0].EmbedUrl;
                 string resolvedUrl = await ServiceLocator.Resolver.ResolveAsync(rawUrl, ct).ConfigureAwait(true);
+                ct.ThrowIfCancellationRequested();
 
                 string home = match.Teams?.Home?.Name ?? "";
                 string away = match.Teams?.Away?.Name ?? "";
                 string title = string.IsNullOrEmpty(home) || string.IsNullOrEmpty(away) ? match.Title : home + " vs " + away;
 
-                await Shell.Current.GoToAsync(
-                    $"PlayerPage?url={Uri.EscapeDataString(resolvedUrl)}&title={Uri.EscapeDataString(title)}"
-                ).ConfigureAwait(true);
+                await Shell.Current.GoToAsync(nameof(PlayerPage), new ShellNavigationQueryParameters
+                {
+                    ["url"] = resolvedUrl,
+                    ["title"] = title
+                }).ConfigureAwait(true);
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-                await DisplayAlert("Error", "Could not load stream: " + ex.Message, "OK").ConfigureAwait(true);
+                if (!ct.IsCancellationRequested) await DisplayAlert("Error", "Could not load the stream. Check your connection and try again.", "OK").ConfigureAwait(true);
             }
+            finally { _openingStream = false; }
         }
 
-        private void ShowMessage(string msg)
+        private void ShowMessage(string msg, bool retrySports = false)
         {
             MatchList.Children.Clear();
             MatchList.Children.Add(new Label
@@ -239,6 +246,18 @@ namespace StreamedTv.Views
                 HorizontalOptions = LayoutOptions.Center,
                 Margin = new Thickness(0, 80, 0, 0),
             });
+            if (msg == "Loading…") return;
+            var retry = new Button { Text = "Retry", AutomationId = "CatalogRetry", WidthRequest = 180, HorizontalOptions = LayoutOptions.Center };
+            StyleRemoteButton(retry);
+            retry.Clicked += async (_, _) =>
+            {
+                _cts?.Cancel();
+                _cts?.Dispose();
+                _cts = new CancellationTokenSource();
+                if (retrySports) await LoadSportsAsync(_cts.Token);
+                else await LoadMatchesAsync(_activeSportId, _cts.Token);
+            };
+            MatchList.Children.Add(retry);
         }
     }
 }

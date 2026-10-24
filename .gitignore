@@ -18,6 +18,7 @@ node_modules/
 *.log
 test-results/
 playwright-report/
+__pycache__/
 dist/
 
 # Tizen build and signing outputs

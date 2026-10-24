@@ -3,8 +3,11 @@
        xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
        xmlns:views="clr-namespace:StreamedTv.Views"
        x:Class="StreamedTv.AppShell"
-       Shell.NavBarIsVisible="False">
-    <ShellContent
-        Route="MainPage"
-        ContentTemplate="{DataTemplate views:MainPage}" />
+       Shell.NavBarIsVisible="False" Shell.TabBarIsVisible="False" FlyoutBehavior="Disabled">
+    <ShellItem x:Name="LoginRoot" Route="LoginPage">
+        <ShellSection><ShellContent ContentTemplate="{DataTemplate views:LoginPage}" /></ShellSection>
+    </ShellItem>
+    <ShellItem x:Name="CatalogRoot" Route="MainPage">
+        <ShellSection><ShellContent ContentTemplate="{DataTemplate views:MainPage}" /></ShellSection>
+    </ShellItem>
 </Shell>

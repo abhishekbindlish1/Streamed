@@ -8,7 +8,7 @@ in the same change; each platform still has its own build and release status.
 | --- | --- | --- |
 | Browser / Tizen web | [`apps/web`](apps/web) | Browser demo and older Tizen 5.5 / Chromium 69 compatibility checks |
 | Tizen .NET / NUI | [`apps/tizen-dotnet`](apps/tizen-dotnet) | Tizen 9 development build; device signing and playback need TV verification |
-| Android / MAUI | [`apps/android`](apps/android) | Experimental port with a separate, fixture-only debug sandbox |
+| Android / MAUI | [`apps/android`](apps/android) | Experimental native playback, remote navigation, and Android/Android TV emulator checks |
 | Go backend | [`services/api`](services/api) | Sports, profiles, pairing, configuration, and optional cloud integrations |
 | Extractor service | [`services/extractor`](services/extractor) | Separate Go service; production auth/configuration remains separate |
 
@@ -51,6 +51,7 @@ Successful main builds can deploy the demo once Pages Source is set to GitHub
 Actions. Native packages are development previews, not Samsung/Play Store releases.
 Android includes an ARM64 device build and an x64 emulator sandbox build. All
 downloads inherit the repository’s private access settings. See [publishing](docs/releases.md).
+See [TV test environments](docs/tv-testing.md) for Android TV, LG webOS and Samsung Tizen.
 
 ## Screenshots
 

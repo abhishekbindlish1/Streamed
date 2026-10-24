@@ -57,6 +57,66 @@ public sealed class CatalogTests
         Assert.Contains("0 matches", catalog.LastNetworkError);
     }
 
+    [Fact]
+    public async Task TemporaryNetworkFailureDoesNotCacheAnEmptyCatalog()
+    {
+        var handler = new RecoveringHandler();
+        var catalog = new StreamedCatalogService(new HttpClient(handler));
+        Assert.Empty(await catalog.GetSportsAsync(CancellationToken.None));
+        Assert.NotNull(catalog.LastNetworkError);
+        Assert.Single(await catalog.GetSportsAsync(CancellationToken.None));
+        Assert.Null(catalog.LastNetworkError);
+        Assert.Equal(2, handler.Requests);
+    }
+
+    [Fact]
+    public async Task CancelledRequestDoesNotBecomeACachedEmptyResponse()
+    {
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        var catalog = new StreamedCatalogService(new HttpClient(new FixtureHandler("[{\"id\":\"football\",\"name\":\"Football\"}]")));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => catalog.GetSportsAsync(cancelled.Token));
+        Assert.Single(await catalog.GetSportsAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CancellingAnInFlightRequestStillAllowsANewRequest()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var handler = new BlockingOnceHandler();
+        var catalog = new StreamedCatalogService(new HttpClient(handler));
+        var pending = catalog.GetSportsAsync(cancellation.Token);
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
+        Assert.Single(await catalog.GetSportsAsync(CancellationToken.None));
+    }
+
+    private sealed class BlockingOnceHandler : HttpMessageHandler
+    {
+        private int _requests;
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (++_requests == 1) await Task.Delay(Timeout.Infinite, cancellationToken);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("[{\"id\":\"football\",\"name\":\"Football\"}]", Encoding.UTF8, "application/json")
+            };
+        }
+    }
+
+    private sealed class RecoveringHandler : HttpMessageHandler
+    {
+        public int Requests { get; private set; }
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Requests++;
+            return Task.FromResult(new HttpResponseMessage(Requests == 1 ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK)
+            {
+                Content = new StringContent(Requests == 1 ? "Temporary outage" : "[{\"id\":\"football\",\"name\":\"Football\"}]", Encoding.UTF8, "application/json")
+            });
+        }
+    }
+
     private sealed class FixtureHandler(string json) : HttpMessageHandler
     {
         public int Requests { get; private set; }

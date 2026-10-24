@@ -7,6 +7,12 @@ namespace StreamedTv
 #else
         public static bool IsSandbox => false;
 #endif
+        public static bool RequiresPairing => !IsSandbox || IsPairingFixture;
+#if SANDBOX_PAIRING
+        public static bool IsPairingFixture => true;
+#else
+        public static bool IsPairingFixture => false;
+#endif
         public static Services.BackendAuthService Auth { get; private set; }
         public static Services.StreamedCatalogService Catalog { get; private set; }
         public static Services.StreamResolverService Resolver { get; private set; }
@@ -18,8 +24,8 @@ namespace StreamedTv
             Auth = new Services.BackendAuthService("http://10.0.2.2:8080");
 #else
             Auth = new Services.BackendAuthService();
-            Auth.ReloadJwtFromDisk();
 #endif
+            if (RequiresPairing) Auth.ReloadJwtFromDisk();
             Catalog = new Services.StreamedCatalogService();
             Resolver = new Services.StreamResolverService(Auth);
         }

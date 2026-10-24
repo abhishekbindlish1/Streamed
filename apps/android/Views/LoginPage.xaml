@@ -5,11 +5,14 @@
              BackgroundColor="#111111">
     <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="24" Padding="48">
         <Label Text="StreamedTV" TextColor="#ffffff" FontSize="32" FontAttributes="Bold" HorizontalOptions="Center"/>
+        <Label x:Name="FixtureNotice" Text="SANDBOX · Test pairing only" IsVisible="False" TextColor="#ffbcbc" FontSize="16" HorizontalOptions="Center"/>
         <Label Text="Sign in on your phone to continue" TextColor="#aaaaaa" FontSize="16" HorizontalOptions="Center"/>
-        <Frame BackgroundColor="#222222" CornerRadius="8" Padding="24" HorizontalOptions="Center">
-            <Label x:Name="PairCode" Text="Loading…" TextColor="#ffffff" FontSize="28" FontFamily="OpenSansRegular" HorizontalOptions="Center"/>
-        </Frame>
-        <Label Text="Visit streamed.tv/pair and enter the code above" TextColor="#888888" FontSize="14" HorizontalOptions="Center"/>
+        <Border BackgroundColor="#222222" StrokeShape="RoundRectangle 8" Padding="24" HorizontalOptions="Center">
+            <Label x:Name="PairCode" Text="Loading…" TextColor="#ffffff" FontSize="28" HorizontalOptions="Center"/>
+        </Border>
+        <Label x:Name="PairingAddress" TextColor="#cccccc" FontSize="14" MaximumWidthRequest="640" LineBreakMode="WordWrap" HorizontalOptions="Center"/>
+        <Label x:Name="PairingStatus" Text="Requesting a sign-in code…" TextColor="#cccccc" FontSize="16" HorizontalOptions="Center"/>
         <ActivityIndicator x:Name="Spinner" IsRunning="True" Color="#4a90e2" HorizontalOptions="Center"/>
+        <Button x:Name="RetryButton" Text="Retry pairing" IsVisible="False" Clicked="OnRetryClicked" HorizontalOptions="Center"/>
     </VerticalStackLayout>
 </ContentPage>

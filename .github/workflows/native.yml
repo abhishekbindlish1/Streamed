@@ -50,16 +50,14 @@ jobs:
           path: release-native/tizen/
           if-no-files-found: error
 
-  android:
+
+  android_build:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - name: Free unused preinstalled runner toolchains
-        run: |
-          # These tools are unused by the Android job; MAUI and the AVD need disk space.
-          sudo rm -rf -- /opt/hostedtoolcache/CodeQL /usr/share/swift
-          df -h /
+        run: sudo rm -rf -- /opt/hostedtoolcache/CodeQL /usr/share/swift
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -74,65 +72,18 @@ jobs:
         run: |
           dotnet workload install maui-android --skip-manifest-update
           bash scripts/verify-dotnet-workloads.sh
-      - name: Configure runner Android SDK and required packages
-        run: |
-          # ubuntu-24.04 includes the SDK, but sdkmanager is not on PATH.
-          sdk_root="${ANDROID_HOME:?The runner Android SDK is required}"
-          sdk_manager="$sdk_root/cmdline-tools/latest/bin/sdkmanager"
-          if [[ ! -x "$sdk_manager" ]]; then
-            echo "::error::The runner is missing Android command-line tools at $sdk_manager"
-            exit 1
-          fi
-          echo "ANDROID_SDK_ROOT=$sdk_root" >> "$GITHUB_ENV"
-          echo "$(dirname "$sdk_manager")" >> "$GITHUB_PATH"
-          echo "$sdk_root/platform-tools" >> "$GITHUB_PATH"
-          "$sdk_manager" --version
-          # Process substitution preserves sdkmanager's exit status when yes
-          # receives SIGPIPE after the final license prompt.
-          if ! "$sdk_manager" --licenses < <(yes) > "$RUNNER_TEMP/android-licenses.log" 2>&1; then
-            tail -n 10 "$RUNNER_TEMP/android-licenses.log" | sed 's/^/::error::/'
-            exit 1
-          fi
-          if ! "$sdk_manager" "platform-tools" "platforms;android-36" "build-tools;36.0.0" "emulator" "system-images;android-28;default;x86_64" > "$RUNNER_TEMP/android-sdk.log" 2>&1; then
-            cat "$RUNNER_TEMP/android-sdk.log"
-            tail -n 8 "$RUNNER_TEMP/android-sdk.log" | sed 's/^/::error::/'
-            exit 1
-          fi
-          cat "$RUNNER_TEMP/android-sdk.log"
-      - name: Build experimental fixture-only APK
+      - name: Install Android build dependencies
+        run: bash scripts/setup-android-sdk.sh platform-tools 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Build sandbox APK
         run: >-
           dotnet build apps/android/StreamedTv.Android.csproj -c Debug
           -p:SandboxMode=true -p:RuntimeIdentifier=android-x64
           -p:EmbedAssembliesIntoApk=true -p:AndroidPackageFormats=apk
-      - name: Allow emulator hardware acceleration
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-      - name: Android sandbox startup and screenshot
-        timeout-minutes: 12
-        run: |
-          export ANDROID_AVD_HOME="$RUNNER_TEMP/streamed-avd"
-          mkdir -p "$ANDROID_AVD_HOME"
-          printf 'no\n' | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --force --name StreamedCi --package 'system-images;android-28;default;x86_64'
-          # Replace generated defaults so each hardware property appears once.
-          sed -i -E '/^(hw\.(cpu\.ncore|ramSize|lcd\.(width|height|density))|disk\.dataPartition\.size)[[:space:]]*=/d' "$ANDROID_AVD_HOME/StreamedCi.avd/config.ini"
-          cat >> "$ANDROID_AVD_HOME/StreamedCi.avd/config.ini" <<'CONFIG'
-          hw.cpu.ncore=2
-          hw.ramSize=1536
-          hw.lcd.width=1280
-          hw.lcd.height=720
-          hw.lcd.density=160
-          disk.dataPartition.size=2G
-          CONFIG
-          bash scripts/android-ci-smoke.sh StreamedCi
-      - uses: actions/upload-artifact@v6
-        if: always()
-        with:
-          name: android-startup-logs
-          path: test-results/android/*.log
-          if-no-files-found: ignore
-          retention-days: 7
+      - name: Build isolated pairing fixture APK
+        run: >-
+          dotnet build apps/android/StreamedTv.Android.csproj -c Debug
+          -p:SandboxMode=true -p:SandboxPairing=true -p:RuntimeIdentifier=android-x64
+          -p:EmbedAssembliesIntoApk=true -p:AndroidPackageFormats=apk
       - name: Build ARM64 device development APK
         run: >-
           dotnet build apps/android/StreamedTv.Android.csproj -c Debug
@@ -141,16 +92,85 @@ jobs:
       - name: Verify APK signatures and prepare downloads
         run: |
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify apps/android/bin/Debug/net10.0-android/android-x64/com.streamed.tv.android.sandbox-Signed.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify apps/android/bin/Debug/net10.0-android/android-x64/com.streamed.tv.android.sandbox.pairing-Signed.apk
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify apps/android/bin/Debug/net10.0-android/android-arm64/com.streamed.tv.android-Signed.apk
           node scripts/release-assets.js android
+      - uses: actions/upload-artifact@v6
+        with:
+          name: android-smoke-apks
+          path: |
+            apps/android/bin/Debug/net10.0-android/android-x64/com.streamed.tv.android.sandbox-Signed.apk
+            apps/android/bin/Debug/net10.0-android/android-x64/com.streamed.tv.android.sandbox.pairing-Signed.apk
+          if-no-files-found: error
+          retention-days: 7
       - uses: actions/upload-artifact@v6
         with:
           name: android-distribution
           path: release-native/android/
           if-no-files-found: error
+
+  android_test:
+    needs: android_build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: android-api28
+            api: 28
+            target: default
+            width: 720
+            height: 1280
+            density: 240
+          - name: android-tv-api36
+            api: 36
+            target: android-tv
+            width: 1280
+            height: 720
+            density: 160
+    steps:
+      - uses: actions/checkout@v6
+      - name: Free space for the system image and emulator
+        run: sudo rm -rf -- /opt/hostedtoolcache/CodeQL /usr/share/swift "$ANDROID_HOME/ndk"
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@v7
+        with:
+          name: android-smoke-apks
+          path: apps/android/bin/Debug/net10.0-android/android-x64/
+      - name: Install official emulator and selected system image
+        run: bash scripts/setup-android-sdk.sh platform-tools emulator 'system-images;android-${{ matrix.api }};${{ matrix.target }};x86_64'
+      - name: Allow emulator hardware acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Remote navigation, real playback, Back and pairing regression checks
+        timeout-minutes: 15
+        run: |
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/streamed-avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          printf 'no\n' | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --force --name StreamedCi --package 'system-images;android-${{ matrix.api }};${{ matrix.target }};x86_64'
+          sed -i -E '/^(hw\.(cpu\.ncore|ramSize|lcd\.(width|height|density))|disk\.dataPartition\.size)[[:space:]]*=/d' "$ANDROID_AVD_HOME/StreamedCi.avd/config.ini"
+          cat >> "$ANDROID_AVD_HOME/StreamedCi.avd/config.ini" <<'CONFIG'
+          hw.cpu.ncore=2
+          hw.ramSize=2048
+          hw.lcd.width=${{ matrix.width }}
+          hw.lcd.height=${{ matrix.height }}
+          hw.lcd.density=${{ matrix.density }}
+          disk.dataPartition.size=4G
+          CONFIG
+          bash scripts/android-ci-smoke.sh StreamedCi
       - uses: actions/upload-artifact@v6
         if: always()
         with:
-          name: android-sandbox-screenshots
-          path: test-results/android/*.png
+          name: android-results-${{ matrix.name }}
+          path: test-results/android/
           if-no-files-found: ignore
+          retention-days: 7
