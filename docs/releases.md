@@ -96,11 +96,14 @@ separately secured backend if you enable them later.
 | `streamed-tizen9-1.13.33-development.tpk` | Tizen 9 .NET development build; SDK test signing, not universal Samsung TV installation. |
 | `streamed-android-arm64-development-vVERSION.apk` | Experimental ARM64 Android devices, API 26+; debug signed, real pairing/login flow. |
 | `streamed-android-x64-emulator-sandbox-vVERSION.apk` | x64 Android emulator with the local fixture server; no real account sign-in. |
+| `streamed-webos-development-vVERSION.ipk` | LG webOS TV preview with an offline catalog and owned sample media; install using LG Developer Mode. |
 
 `BUILD-INFO.json` records the exact source commit and platform/signing constraints.
 The release assembler rejects missing platforms, mismatched commits, dirty native
 builds, or altered package checksums. `SHA256SUMS` covers the packages and install
 notes. CI verifies both APK signatures before publishing.
+The LG collector also inspects the IPK's embedded manifest and build metadata;
+an old package from another source commit cannot be published as the new build.
 
 Samsung TV installation requires a compatible OS and an authorized author and
 distributor signing profile. The native TPK targets API 9 and cannot run on the
