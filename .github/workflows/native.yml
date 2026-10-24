@@ -3,6 +3,25 @@ name: Native and backend CI
 on:
   push:
     branches: ['**']
+    paths:
+      - 'apps/android/**'
+      - 'apps/tizen-dotnet/**'
+      - 'apps/web/package.json'
+      - 'services/**'
+      - 'tests/Streamed.Core.Tests/**'
+      - 'scripts/android*'
+      - 'scripts/setup-android-sdk.sh'
+      - 'scripts/verify-dotnet-workloads.sh'
+      - 'scripts/release-assets.js'
+      - '.github/workflows/native.yml'
+      - '.github/workflows/ci.yml'
+      - '.nvmrc'
+      - 'global.json'
+      - 'NuGet.Config'
+      - 'NuGet.config'
+      - 'nuget.config'
+      - 'Directory.*.props'
+      - 'Directory.*.targets'
   pull_request:
   workflow_dispatch:
   workflow_call:
