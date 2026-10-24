@@ -69,10 +69,25 @@ jobs:
         run: |
           dotnet workload install maui-android --skip-manifest-update
           bash scripts/verify-dotnet-workloads.sh
-      - name: Set up Android command-line tools
-        uses: android-actions/setup-android@v3
-      - name: Install Android platform and build tools
-        run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+      - name: Configure runner Android SDK and required packages
+        run: |
+          # ubuntu-24.04 includes the SDK, but sdkmanager is not on PATH.
+          sdk_root="${ANDROID_HOME:?The runner Android SDK is required}"
+          sdk_manager="$sdk_root/cmdline-tools/latest/bin/sdkmanager"
+          if [[ ! -x "$sdk_manager" ]]; then
+            echo "::error::The runner is missing Android command-line tools at $sdk_manager"
+            exit 1
+          fi
+          echo "ANDROID_SDK_ROOT=$sdk_root" >> "$GITHUB_ENV"
+          echo "$(dirname "$sdk_manager")" >> "$GITHUB_PATH"
+          echo "$sdk_root/platform-tools" >> "$GITHUB_PATH"
+          "$sdk_manager" --version
+          if ! "$sdk_manager" "platform-tools" "platforms;android-36" "build-tools;36.0.0" > "$RUNNER_TEMP/android-sdk.log" 2>&1; then
+            cat "$RUNNER_TEMP/android-sdk.log"
+            tail -n 8 "$RUNNER_TEMP/android-sdk.log" | sed 's/^/::error::/'
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/android-sdk.log"
       - name: Build experimental fixture-only APK
         run: >-
           dotnet build apps/android/StreamedTv.Android.csproj -c Debug
