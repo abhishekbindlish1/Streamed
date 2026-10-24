@@ -31,12 +31,20 @@ def snapshot(name):
 
 
 def ui():
-    command('shell', 'rm', '-f', '/sdcard/streamed-smoke.xml')
-    command('shell', 'uiautomator', 'dump', '/sdcard/streamed-smoke.xml')
-    data = command('exec-out', 'cat', '/sdcard/streamed-smoke.xml')
-    root = ET.fromstring(data)
-    (output / 'android-ui.xml').write_bytes(data)
-    return root
+    # Android may momentarily have no accessibility root during focus or page
+    # transitions. Retry fresh snapshots, never reuse an old hierarchy.
+    for attempt in range(3):
+        try:
+            command('shell', 'rm', '-f', '/sdcard/streamed-smoke.xml')
+            command('shell', 'uiautomator', 'dump', '/sdcard/streamed-smoke.xml')
+            data = command('exec-out', 'cat', '/sdcard/streamed-smoke.xml')
+            root = ET.fromstring(data)
+            (output / 'android-ui.xml').write_bytes(data)
+            return root
+        except (ET.ParseError, subprocess.SubprocessError):
+            if attempt == 2:
+                raise
+            time.sleep(1)
 
 
 def has_text(root, text):
