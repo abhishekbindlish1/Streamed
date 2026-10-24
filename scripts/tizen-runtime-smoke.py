@@ -51,16 +51,21 @@ try:
     if not serial:
         raise RuntimeError('Samsung VM did not connect to SDB within five minutes')
     command([sdb, '-s', serial, 'capability'], 'sdb-capability')
+    command([sdb, '-s', serial, 'shell', 'date', '-u'], 'device-clock')
     packages = list((root / 'apps/tizen-dotnet/bin/Release/tizen90').glob('*.tpk'))
     if len(packages) != 1:
         raise RuntimeError('Expected exactly one freshly built native TPK')
     # This is the built development package, not a re-signed or modified test copy.
-    result = command([tizen, 'install', '-n', packages[0].name, '-s', serial, '--', packages[0].parent], 'install-native-tpk', timeout=120)
+    # The .NET first-app guide specifies SDB's native TPK installer. The TV
+    # web CLI routes "tizen install" through wascmd instead of native pkgcmd.
+    result = command([sdb, '-s', serial, 'install', packages[0]], 'install-native-tpk', timeout=120)
     print('::notice::Samsung TPK install: ' + result[-1800:].replace('\n', '%0A'), flush=True)
     command([tizen, 'run', '-p', 'com.streamed.tv.dotnet', '-s', serial], 'launch-native-tpk', timeout=90)
     time.sleep(15)
-    processes = command([sdb, '-s', serial, 'shell', 'ps -ef'], 'native-processes')
-    if 'StreamedTv.dll' not in processes:
+    # Samsung disables the general interactive shell. Use its advertised
+    # appid2pid capability, as the SDK's own ApplicationUtil does.
+    process = command([sdb, '-s', serial, 'shell', '/usr/bin/appid2pid', 'com.streamed.tv.dotnet'], 'native-processes')
+    if not any(word.isdecimal() and int(word) > 1 for word in process.split()):
         raise RuntimeError('The native app did not remain running after launch')
     ImageGrab.grab(xdisplay=os.environ.get('DISPLAY')).save(output / 'tizen-native-startup.png')
     print('Samsung TV 10 emulator booted; the source TPK installed, launched and remained running. Media/provider acceptance is separate.')
@@ -74,6 +79,7 @@ except Exception as error:
             'device-journal': ['shell', 'journalctl', '-n', '120', '--no-pager'],
             'device-package-list': ['shell', 'pkgcmd', '-l'],
         }
+        probes['device-clock'] = ['shell', 'date', '-u']
         for name, arguments in probes.items():
             try:
                 text = command([sdb, '-s', serial, *arguments], name, timeout=20)
