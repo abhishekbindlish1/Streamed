@@ -59,7 +59,8 @@ under a subpath, such as `/Streamed/`; CI exercises that exact layout.
 
 3. GitHub Actions runs all tests, checks that the tag matches the package version,
    and builds/tests the native apps and both backend services through a reusable
-   workflow. Only after every required check passes does it publish the browser
+   workflow. The exact release IPK and TPK must also pass the actual LG Simulator
+   and Samsung emulator jobs. Only after every required check passes does it publish the browser
    ZIP, native TPK/APKs, SHA256SUMS, BUILD-INFO.json, and INSTALL.md to one release. If validation
    fails, no release is published. Rerunning a successful tag workflow replaces
    its generated assets; it does not move the tag.
@@ -93,7 +94,7 @@ separately secured backend if you enable them later.
 
 | Asset | Intended use |
 | --- | --- |
-| `streamed-tizen9-1.13.33-development.tpk` | Tizen 9 .NET development build; SDK test signing, not universal Samsung TV installation. |
+| `streamed-tizen9-1.13.34-development.tpk` | Tizen 9 .NET development build; current SDK development signing, not universal Samsung TV installation. |
 | `streamed-android-arm64-development-vVERSION.apk` | Experimental ARM64 Android devices, API 26+; debug signed, real pairing/login flow. |
 | `streamed-android-x64-emulator-sandbox-vVERSION.apk` | x64 Android emulator with the local fixture server; no real account sign-in. |
 | `streamed-webos-development-vVERSION.ipk` | LG webOS TV preview with an offline catalog and owned sample media; install using LG Developer Mode. |
@@ -102,6 +103,12 @@ separately secured backend if you enable them later.
 The release assembler rejects missing platforms, mismatched commits, dirty native
 builds, or altered package checksums. `SHA256SUMS` covers the packages and install
 notes. CI verifies both APK signatures before publishing.
+The TPK collector checks every embedded author/distributor certificate's validity
+and records the earliest expiry as `signingExpires`. Tizen Studio's developer CA
+currently expires January 1, 2027. The build generates a disposable author outside
+the checkout, so uninstall an older development build before installing a new one.
+Earlier preview TPKs used expired NuGet SDK defaults; rebuild with
+`scripts/build-tizen-development.py` or use the corrected preview.6 package.
 The LG collector also inspects the IPK's embedded manifest and build metadata;
 an old package from another source commit cannot be published as the new build.
 

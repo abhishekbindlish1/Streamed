@@ -75,7 +75,10 @@ jobs:
 
   vendor_runtime_release:
     if: startsWith(github.ref, 'refs/tags/v')
+    needs: [test, native_release]
     uses: ./.github/workflows/vendor-tv.yml
+    with:
+      use_release_artifacts: true
     permissions:
       contents: read
 

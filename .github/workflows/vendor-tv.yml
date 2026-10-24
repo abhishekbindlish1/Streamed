@@ -15,6 +15,11 @@ on:
   pull_request:
   workflow_dispatch:
   workflow_call:
+    inputs:
+      use_release_artifacts:
+        description: Test the exact packages prepared for publication
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -37,7 +42,19 @@ jobs:
       - name: Prepare the official LG Simulator
         run: python3 scripts/setup-tv-sdks.py webos --root "$RUNNER_TEMP/tv-sdk" --cache "$RUNNER_TEMP/tv-downloads"
       - name: Build the LG development IPK
+        if: ${{ !inputs.use_release_artifacts }}
         run: npm run build:webos
+      - uses: actions/download-artifact@v7
+        if: inputs.use_release_artifacts
+        with:
+          name: webos-distribution
+          path: incoming/webos
+      - name: Extract the release IPK for LG's Simulator
+        if: inputs.use_release_artifacts
+        run: |
+          mkdir -p "$RUNNER_TEMP/webos-package" apps/webos/dist/app
+          ar p incoming/webos/*.ipk data.tar.gz | tar -xz -C "$RUNNER_TEMP/webos-package"
+          cp -a "$RUNNER_TEMP/webos-package/usr/palm/applications/com.streamed.tv.webos.preview/." apps/webos/dist/app/
       - name: Test in LG's actual Simulator
         run: xvfb-run -a -s '-screen 0 2560x1440x24' node scripts/webos-simulator-smoke.js
       - uses: actions/upload-artifact@v6
@@ -81,7 +98,13 @@ jobs:
             exit 1
           fi
       - name: Build the native Tizen development package
+        if: ${{ !inputs.use_release_artifacts }}
         run: python3 scripts/build-tizen-development.py
+      - uses: actions/download-artifact@v7
+        if: inputs.use_release_artifacts
+        with:
+          name: tizen-distribution
+          path: apps/tizen-dotnet/bin/Release/tizen90/
       - name: Install and launch the native TPK in Samsung TV 10
         run: xvfb-run -a -s '-screen 0 2560x1440x24' /usr/bin/python3 scripts/tizen-runtime-smoke.py
       - uses: actions/upload-artifact@v6

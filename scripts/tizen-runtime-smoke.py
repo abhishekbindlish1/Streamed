@@ -18,6 +18,7 @@ emcli = sdk / 'tools/emulator/bin/em-cli'
 tizen = sdk / 'tools/ide/bin/tizen'
 sdb = sdk / 'tools/sdb'
 launcher = None
+serial = None
 
 
 def command(arguments, name, timeout=45):
@@ -37,7 +38,6 @@ try:
     launcher = subprocess.Popen([str(emcli), 'launch', '-n', 'StreamedSamsungCi'], env=env,
                                 stdout=launch_log, stderr=subprocess.STDOUT, start_new_session=True)
     deadline = time.monotonic() + 300
-    serial = None
     while time.monotonic() < deadline:
         if launcher.poll() not in (None, 0):
             raise RuntimeError('Samsung emulator manager exited before boot: ' + (output / 'launch-vm.log').read_text(errors='replace')[-2500:])
@@ -50,6 +50,7 @@ try:
         time.sleep(3)
     if not serial:
         raise RuntimeError('Samsung VM did not connect to SDB within five minutes')
+    command([sdb, '-s', serial, 'capability'], 'sdb-capability')
     packages = list((root / 'apps/tizen-dotnet/bin/Release/tizen90').glob('*.tpk'))
     if len(packages) != 1:
         raise RuntimeError('Expected exactly one freshly built native TPK')
@@ -65,6 +66,26 @@ try:
     print('Samsung TV 10 emulator booted; the source TPK installed, launched and remained running. Media/provider acceptance is separate.')
 except Exception as error:
     print('::error::Samsung runtime test: ' + str(error).replace('\n', '%0A'), flush=True)
+    if serial:
+        # The TV CLI can collapse native installer errors into "install app
+        # failed". Preserve the device's actual package-manager diagnostics.
+        probes = {
+            'device-package-log': ['shell', 'dlogutil', '-d'],
+            'device-journal': ['shell', 'journalctl', '-n', '120', '--no-pager'],
+            'device-package-list': ['shell', 'pkgcmd', '-l'],
+        }
+        for name, arguments in probes.items():
+            try:
+                text = command([sdb, '-s', serial, *arguments], name, timeout=20)
+                lines = [line for line in text.splitlines() if any(word in line.lower() for word in
+                         ['pkg', 'package', 'certificate', 'signature', 'streamed', 'dotnet', 'failed', 'error', 'denied', 'not support'])]
+                excerpt = '\n'.join(lines[-60:]) or text[-1200:]
+                print('::notice::Samsung ' + name + ': ' + excerpt.replace('%', '%25').replace('\n', '%0A'), flush=True)
+            except Exception as probe_error:
+                print('::notice::Samsung ' + name + ': ' + str(probe_error).replace('%', '%25').replace('\n', '%0A'), flush=True)
+        capability = output / 'sdb-capability.log'
+        if capability.exists():
+            print('::notice::Samsung capabilities: ' + capability.read_text().replace('%', '%25').replace('\n', '%0A'), flush=True)
     for name in ['launch-vm.log', 'sdb-devices.log']:
         path = output / name
         if path.exists():
