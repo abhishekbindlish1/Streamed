@@ -69,13 +69,13 @@ def launch():
     command('shell', 'monkey', '-p', package, '-c', 'android.intent.category.LAUNCHER', '1')
 
 
-def focus_match(name):
+def focus_button(name):
     for _ in range(12):
         root = ui()
         if any(node.get('focused') == 'true' and name.casefold() in node.get('text', '').casefold() for node in root.iter('node')):
             return
         key(20)  # DPAD_DOWN; match selection must work without touch.
-    raise AssertionError('Remote could not focus match: ' + name)
+    raise AssertionError('Remote could not focus button: ' + name)
 
 
 def playing_position(root):
@@ -102,7 +102,7 @@ def assert_bounded_page_layout():
 
 
 def test_playback(name, label):
-    focus_match(name)
+    focus_button(name)
     command('logcat', '-c')
     key(23)  # DPAD_CENTER
     first = wait_for(lambda root: playing_position(root) > 0, label + ' never started native playback')
@@ -142,6 +142,9 @@ try:
         fixture_action('fail-next-init')
         launch()
         wait_for(lambda root: has_text(root, 'Retry pairing'), 'Pairing network failure had no Retry action')
+        # Visibility precedes focus during Android TV layout. Navigate with the
+        # remote and confirm the target before pressing CENTER, as for cards.
+        focus_button('Retry pairing')
         key(23)
         wait_for(lambda root: has_text(root, '123 456'), 'Pairing Retry did not obtain a code')
         snapshot('android-pairing.png')
@@ -172,6 +175,8 @@ except Exception as error:
         root = ui()
         text = ' | '.join(node.get('text', '') for node in root.iter('node') if node.get('text'))[:2500]
         print('::notice::Visible Android UI: ' + text.replace('%', '%25').replace('\n', ' '), flush=True)
+        focused = ' | '.join(node.get('text', '') for node in root.iter('node') if node.get('focused') == 'true')
+        print('::notice::Focused Android control: ' + focused.replace('%', '%25').replace('\n', ' '), flush=True)
     except (ET.ParseError, subprocess.SubprocessError):
         pass
     try:

@@ -5,12 +5,15 @@ namespace StreamedTv.Views;
 public partial class LoginPage : ContentPage
 {
     private CancellationTokenSource? _cts;
+    private bool _retryNeedsFocus;
 
     public LoginPage()
     {
         InitializeComponent();
         FixtureNotice.IsVisible = ServiceLocator.IsPairingFixture;
         Controls.RemoteButtonStyle.Apply(RetryButton);
+        RetryButton.Loaded += (_, _) => FocusRetryWhenReady();
+        RetryButton.SizeChanged += (_, _) => FocusRetryWhenReady();
         PairingAddress.Text = "Visit " + ServiceLocator.Auth.BaseUrl + "/pair on your phone and enter this code.";
     }
 
@@ -22,6 +25,7 @@ public partial class LoginPage : ContentPage
 
     protected override void OnDisappearing()
     {
+        _retryNeedsFocus = false;
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = null;
@@ -30,6 +34,7 @@ public partial class LoginPage : ContentPage
 
     private void BeginPairing()
     {
+        _retryNeedsFocus = false;
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = new CancellationTokenSource();
@@ -37,6 +42,18 @@ public partial class LoginPage : ContentPage
     }
 
     private void OnRetryClicked(object sender, EventArgs e) => BeginPairing();
+
+    private void FocusRetryWhenReady()
+    {
+        if (!_retryNeedsFocus || !RetryButton.IsVisible || RetryButton.Width <= 0 || RetryButton.Height <= 0) return;
+        // IsVisible is set before Android arranges the newly shown button.
+        // Wait for a real size and dispatch after that layout pass.
+        RetryButton.Dispatcher.Dispatch(() =>
+        {
+            if (_retryNeedsFocus && RetryButton.IsVisible && _cts is { IsCancellationRequested: false })
+                _retryNeedsFocus = !RetryButton.Focus();
+        });
+    }
 
     private async Task RunPairingAsync(CancellationToken ct)
     {
@@ -83,8 +100,9 @@ public partial class LoginPage : ContentPage
             PairCode.Text = "------";
             PairingStatus.Text = "Could not connect to the sign-in service. Check your connection and retry.";
             Spinner.IsRunning = false;
+            _retryNeedsFocus = true;
             RetryButton.IsVisible = true;
-            RetryButton.Focus();
+            FocusRetryWhenReady();
         }
     }
 }
