@@ -10,6 +10,7 @@ on:
       - 'scripts/*tv*'
       - 'scripts/webos*'
       - 'scripts/tizen*'
+      - 'scripts/build-tizen-development.py'
       - '.github/workflows/vendor-tv.yml'
   pull_request:
   workflow_dispatch:
@@ -80,7 +81,7 @@ jobs:
             exit 1
           fi
       - name: Build the native Tizen development package
-        run: dotnet build apps/tizen-dotnet/StreamedTv.csproj -c Release
+        run: python3 scripts/build-tizen-development.py
       - name: Install and launch the native TPK in Samsung TV 10
         run: xvfb-run -a -s '-screen 0 2560x1440x24' /usr/bin/python3 scripts/tizen-runtime-smoke.py
       - uses: actions/upload-artifact@v6

@@ -1,11 +1,23 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
-const { createHash } = require('node:crypto');
+const { createHash, X509Certificate } = require('node:crypto');
 
 const root = path.resolve(__dirname, '..');
 const hash = data => createHash('sha256').update(data).digest('hex');
 const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
+
+function validateSigningCertificates(xml, now = new Date()) {
+  const encoded = [...xml.matchAll(/<(?:[\w.-]+:)?X509Certificate\b[^>]*>([\s\S]*?)<\/(?:[\w.-]+:)?X509Certificate>/g)];
+  if (!encoded.length) throw new Error('TPK signature has no signing certificates');
+  return encoded.map(([, text]) => {
+    const certificate = new X509Certificate(Buffer.from(text.replace(/\s/g, ''), 'base64'));
+    const validFrom = new Date(certificate.validFrom);
+    const validTo = new Date(certificate.validTo);
+    if (now < validFrom || now >= validTo) throw new Error(`TPK signing certificate is outside its validity period: ${certificate.subject}; expires ${validTo.toISOString()}`);
+    return validTo.toISOString();
+  });
+}
 
 async function context() {
   const { version } = JSON.parse(await fs.readFile(path.join(root, 'apps/web/package.json'), 'utf8'));
@@ -37,8 +49,11 @@ async function collect(kind) {
     for (const entry of ['tizen-manifest.xml', 'author-signature.xml', 'signature1.xml']) {
       if (!inventory.split('\n').includes(entry)) throw new Error(`TPK missing ${entry}`);
     }
+    const expirations = ['author-signature.xml', 'signature1.xml'].flatMap(entry =>
+      validateSigningCertificates(execFileSync('unzip', ['-p', path.join(outputs, packages[0]), entry], { encoding: 'utf8' })));
     await copy(path.join(outputs, packages[0]), `streamed-tizen9-${componentVersion}-development.tpk`, 'tizen-development', {
-      componentVersion, minimumTizenAPI: '9.0', signing: 'Tizen SDK development certificates; Samsung device authorization is not included'
+      componentVersion, minimumTizenAPI: '9.0', signing: 'Fresh disposable author and current Tizen Studio public development distributor; Samsung device authorization is not included',
+      signingExpires: expirations.sort()[0]
     });
   } else if (kind === 'android') {
     for (const [rid, appId, role, label] of [
@@ -92,7 +107,7 @@ async function bundle(input, output, expected) {
   for (const record of records) await fs.copyFile(record.source, path.join(output, record.name));
   const manifest = { version: expected.version, commit: expected.commit, packages: records.map(({ source, ...item }) => item) };
   await fs.writeFile(path.join(output, 'BUILD-INFO.json'), JSON.stringify(manifest, null, 2) + '\n');
-  const notes = `# Streamed v${expected.version}\n\nAll packages below are built from commit ${expected.commit}.\n\n## Downloads\n\n${records.map(item => `- ${item.name}`).join('\n')}\n\n## Install and compatibility\n\n- Browser ZIP: unzip and serve over HTTP. It uses sample events and public test videos; no backend credentials are needed.\n- Tizen TPK: native .NET app for Tizen 9 or newer, signed with SDK development certificates. Downloading does not authorize installation on arbitrary Samsung TVs. A compatible TV and an authorized Samsung author/distributor profile are still required. This TPK does not support the 2020 Tizen 5.5 TV; use the web client there.\n- ARM64 APK: experimental development build for 64-bit Android devices, API 26+. Install with adb or Android package installer. It retains the real pairing/login flow; production login and media playback are not validated by the fixture tests. Debug signing is for testing; updates from a different debug signer may require uninstalling the prior app.\n- LG IPK: experimental webOS TV preview targeting 6.0+, with an offline sample catalog and generated H.264/AAC video. Install using LG Developer Mode and ares-install, then launch com.streamed.tv.webos.preview. It does not enable Developer Mode or provide Content Store authorization. Real TV codecs, DRM and provider streams need separate acceptance testing.\n- x64 sandbox APK: Android emulator only. Start npm run sandbox on the emulator host; it uses 10.0.2.2:8080 and skips pairing for fixture data. Do not use it as a production app.\n\nNative builds remain experimental. Signing keys and credentials are never included. SHA256SUMS covers every download, including BUILD-INFO.json and this file.\n\nThis source repository is private; release downloads require repository access.\n`;
+  const notes = `# Streamed v${expected.version}\n\nAll packages below are built from commit ${expected.commit}.\n\n## Downloads\n\n${records.map(item => `- ${item.name}`).join('\n')}\n\n## Install and compatibility\n\n- Browser ZIP: unzip and serve over HTTP. It uses sample events and public test videos; no backend credentials are needed.\n- Tizen TPK: native .NET app for Tizen 9 or newer, signed with current SDK development certificates. See signingExpires in BUILD-INFO.json; the SDK developer CA currently expires January 1, 2027. Each build uses a disposable author, so uninstall an older development build before installing. Downloading does not authorize installation on arbitrary Samsung TVs. A compatible TV and an authorized Samsung author/distributor profile are still required. This TPK does not support the 2020 Tizen 5.5 TV; use the web client there.\n- ARM64 APK: experimental development build for 64-bit Android devices, API 26+. Install with adb or Android package installer. It retains the real pairing/login flow; production login and media playback are not validated by the fixture tests. Debug signing is for testing; updates from a different debug signer may require uninstalling the prior app.\n- LG IPK: experimental webOS TV preview targeting 6.0+, with an offline sample catalog and generated H.264/AAC video. Install using LG Developer Mode and ares-install, then launch com.streamed.tv.webos.preview. It does not enable Developer Mode or provide Content Store authorization. Real TV codecs, DRM and provider streams need separate acceptance testing.\n- x64 sandbox APK: Android emulator only. Start npm run sandbox on the emulator host; it uses 10.0.2.2:8080 and skips pairing for fixture data. Do not use it as a production app.\n\nNative builds remain experimental. Signing keys and credentials are never included. SHA256SUMS covers every download, including BUILD-INFO.json and this file.\n\nThis source repository is private; release downloads require repository access.\n`;
   await fs.writeFile(path.join(output, 'INSTALL.md'), notes);
   const files = (await fs.readdir(output)).sort();
   const sums = [];
@@ -107,4 +122,4 @@ if (require.main === module) {
     ? context().then(build => { if (build.dirty) throw new Error('Release checkout must be clean'); return bundle(path.join(root, 'incoming'), path.join(root, 'release'), build); })
     : collect(action)).then(result => console.log(typeof result === 'string' ? result : `Prepared all-platform release v${result.version}`)).catch(error => { console.error(error.message); process.exitCode = 1; });
 }
-module.exports = { bundle };
+module.exports = { bundle, validateSigningCertificates };

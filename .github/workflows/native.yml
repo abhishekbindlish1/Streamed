@@ -12,6 +12,9 @@ on:
       - 'scripts/android*'
       - 'scripts/setup-android-sdk.sh'
       - 'scripts/verify-dotnet-workloads.sh'
+      - 'scripts/build-tizen-development.py'
+      - 'scripts/setup-tv-sdks.py'
+      - 'scripts/tv-sdk-versions.json'
       - 'scripts/release-assets.js'
       - '.github/workflows/native.yml'
       - '.github/workflows/ci.yml'
@@ -59,8 +62,10 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - run: dotnet test tests/Streamed.Core.Tests/Streamed.Core.Tests.csproj
-      - name: Compile Tizen 9 development package
-        run: dotnet build apps/tizen-dotnet/StreamedTv.csproj -c Release
+      - name: Prepare current Tizen signing tools
+        run: python3 scripts/setup-tv-sdks.py tizen-cli --root "$RUNNER_TEMP/tv-sdk" --cache "$RUNNER_TEMP/tv-downloads"
+      - name: Compile and sign Tizen 9 development package
+        run: python3 scripts/build-tizen-development.py
       - name: Prepare Tizen download and provenance
         run: node scripts/release-assets.js tizen
       - uses: actions/upload-artifact@v6

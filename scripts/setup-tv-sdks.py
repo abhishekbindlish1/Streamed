@@ -17,7 +17,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 parser = argparse.ArgumentParser()
-parser.add_argument('platform', choices=['webos', 'tizen'])
+parser.add_argument('platform', choices=['webos', 'tizen', 'tizen-cli'])
 parser.add_argument('--root', type=Path, required=True)
 parser.add_argument('--cache', type=Path, required=True)
 args = parser.parse_args()
@@ -104,7 +104,7 @@ def webos():
     return {'WEBOS_SIMULATOR_APPDIR': str(appdir), 'WEBOS_SIMULATOR_VERSION': spec['version']}
 
 
-def tizen():
+def tizen(with_emulator=True):
     spec = versions['tizen']
     installer = download('tizen-web-cli-6.1.bin', spec['url'], spec['sha256']).read_bytes()
     length = int(re.search(rb'ORI_FILE_LEN="(\d+)"', installer[:1000])[1])
@@ -119,19 +119,20 @@ def tizen():
         if member is None:
             raise ValueError('Tizen SDK payload is missing')
         unpack_zip(io.BytesIO(member.read()), sdk)
-    tv = download('samsung-tv10.zip', spec['tvUrl'], spec['tvSha256'])
-    with zipfile.ZipFile(tv) as bundle:
-        for block in bundle.read('pkg_list_ubuntu-64').decode().strip().split('\n\n'):
-            record = dict(line.split(' : ', 1) for line in block.splitlines() if ' : ' in line)
-            if 'Path' not in record:
-                continue
-            data = bundle.read(record['Path'].lstrip('/'))
-            if hashlib.sha256(data).hexdigest() != record['SHA256']:
-                raise ValueError('Samsung TV SDK vendor checksum mismatch')
-            unpack_zip(io.BytesIO(data), sdk, prefix='data/')
-    for package in spec['auxiliary']:
-        archive = download(package['name'] + '.zip', package['url'], package['sha256'])
-        unpack_zip(archive, sdk, prefix='data/')
+    if with_emulator:
+        tv = download('samsung-tv10.zip', spec['tvUrl'], spec['tvSha256'])
+        with zipfile.ZipFile(tv) as bundle:
+            for block in bundle.read('pkg_list_ubuntu-64').decode().strip().split('\n\n'):
+                record = dict(line.split(' : ', 1) for line in block.splitlines() if ' : ' in line)
+                if 'Path' not in record:
+                    continue
+                data = bundle.read(record['Path'].lstrip('/'))
+                if hashlib.sha256(data).hexdigest() != record['SHA256']:
+                    raise ValueError('Samsung TV SDK vendor checksum mismatch')
+                unpack_zip(io.BytesIO(data), sdk, prefix='data/')
+        for package in spec['auxiliary']:
+            archive = download(package['name'] + '.zip', package['url'], package['sha256'])
+            unpack_zip(archive, sdk, prefix='data/')
     data = root / 'tizen-data'
     data.mkdir(exist_ok=True)
     (sdk / 'sdk.info').write_text(f'TIZEN_SDK_INSTALLED_PATH={sdk}\nTIZEN_SDK_DATA_PATH={data}\nJDK_PATH={sdk}/jdk\nTIZEN_SDK_VERSION=6.1\n')
@@ -139,7 +140,7 @@ def tizen():
 
 
 try:
-    configuration = webos() if args.platform == 'webos' else tizen()
+    configuration = webos() if args.platform == 'webos' else tizen(with_emulator=args.platform == 'tizen')
     print(json.dumps(configuration, indent=2))
     if os.environ.get('GITHUB_ENV'):
         with open(os.environ['GITHUB_ENV'], 'a') as output:

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns="http://tizen.org/ns/packages" api-version="9.0" package="com.streamed.tv.dotnet" version="1.13.33">
+<manifest xmlns="http://tizen.org/ns/packages" api-version="9.0" package="com.streamed.tv.dotnet" version="1.13.34">
   <profile name="tv" />
   <ui-application appid="com.streamed.tv.dotnet" exec="StreamedTv.dll" type="dotnet" multiple="false" taskmanage="true" nodisplay="false">
     <label>Streamed</label>

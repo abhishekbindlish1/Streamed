@@ -5,7 +5,21 @@ const os = require('node:os');
 const { createHash } = require('node:crypto');
 const { test } = require('node:test');
 const { buildWeb } = require('../apps/web/scripts/build-web');
-const { bundle } = require('../scripts/release-assets');
+const { bundle, validateSigningCertificates } = require('../scripts/release-assets');
+
+test('TPK release signing rejects expired, future and missing public certificates', async () => {
+  // Public SDK signer only; no key or signing credentials are stored here.
+  const pem = await fs.readFile(path.join(__dirname, 'fixtures/certificates/tizen-public-signer.pem'), 'utf8');
+  const base64 = pem.replace(/-----[^-]+-----/g, '').replace(/\s/g, '');
+  const xml = `<ds:X509Data><ds:X509Certificate>${base64}</ds:X509Certificate></ds:X509Data>`;
+  assert.deepEqual(validateSigningCertificates(xml, new Date('2026-10-24')), ['2032-10-24T04:41:53.000Z']);
+  assert.throws(() => validateSigningCertificates(xml, new Date('2033-01-01')), /outside its validity/);
+  assert.throws(() => validateSigningCertificates(xml, new Date('2021-01-01')), /outside its validity/);
+  assert.throws(() => validateSigningCertificates('<Signature/>'), /no signing certificates/);
+  const plain = xml.replaceAll('ds:', '');
+  assert.equal(validateSigningCertificates(plain, new Date('2026-10-24')).length, 1);
+  assert.throws(() => validateSigningCertificates('<X509Certificate>invalid</X509Certificate>'));
+});
 
 async function fixture(t) {
   const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'streamed-release-test-'));
