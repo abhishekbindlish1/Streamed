@@ -86,10 +86,23 @@ and TizenFX TV API 12.12.0. This does not by itself validate this app's NUI call
 
 This cloud has no `/dev/kvm`. The current emulator explicitly rejected startup
 without hardware virtualization, including when software mode was requested.
-The `samsung_emulator` CI job therefore uses an accelerated Ubuntu runner. Its
-first run found a missing SDL 1.2 runtime; the runner now installs Ubuntu's
-`libsdl1.2debian` compatibility package. Check the actual workflow result before
-claiming native runtime validation. The job captures launch logs and a
-desktop screenshot, installs the unchanged development TPK, and checks startup
-only after the VM connects. Native playback and physical device acceptance remain
-separate. Chromium 69 checks cover browser compatibility, not the entire Tizen OS.
+The `samsung_emulator` CI job therefore uses an accelerated Ubuntu runner. The
+actual VM has booted successfully and connected over SDB. Native app startup is
+still blocked: Samsung rejects the generic SDK signing chain with installer
+error `118 / -12`. The old NuGet certificates also expired in 2019/2022; the
+build now creates a fresh author and uses the current Studio distributor, and
+the collector rejects expired certificates before publishing.
+
+An authorized Samsung author/distributor profile can be supplied through the
+four repository secrets documented in the [native README](../apps/tizen-dotnet/README.md).
+The SDK job records its emulator DUID when available so the profile can include
+that target. Keys are decoded into private temporary files and removed after
+building. No private profile is committed or included in a release.
+
+The TV CLI reaches this image's installer; the generic `sdb install` command
+returned without installing the app. The test therefore verifies installation,
+launch and continued process presence instead of accepting a command's zero exit
+status as proof. It keeps certificate checks enabled and captures SDK logs and
+failure screenshots. Release publication remains gated on the actual runtime
+result. Native playback and physical device acceptance remain separate.
+Chromium 69 checks cover browser compatibility, not the entire Tizen OS.

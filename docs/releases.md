@@ -105,10 +105,12 @@ builds, or altered package checksums. `SHA256SUMS` covers the packages and insta
 notes. CI verifies both APK signatures before publishing.
 The TPK collector checks every embedded author/distributor certificate's validity
 and records the earliest expiry as `signingExpires`. Tizen Studio's developer CA
-currently expires January 1, 2027. The build generates a disposable author outside
-the checkout, so uninstall an older development build before installing a new one.
+currently expires January 1, 2027. By default the build generates a disposable
+author outside the checkout, so uninstall an older build when its signing identity
+changes. Configured Samsung profiles can provide a stable identity.
 Earlier preview TPKs used expired NuGet SDK defaults; rebuild with
-`scripts/build-tizen-development.py` or use the corrected preview.6 package.
+`scripts/build-tizen-development.py` and an authorized profile. Preview.6 is not
+published while Samsung runtime validation remains blocked.
 The LG collector also inspects the IPK's embedded manifest and build metadata;
 an old package from another source commit cannot be published as the new build.
 
