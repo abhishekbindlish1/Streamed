@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="StreamedTv.Views.MainPage"
+             BackgroundColor="#111111">
+    <Grid x:Name="PageLayout" RowDefinitions="32,64,*">
+        <Label x:Name="SandboxNotice" Grid.Row="0" Text="SANDBOX · Sample events and public test videos" IsVisible="False" HeightRequest="32" VerticalOptions="Start" TextColor="White" BackgroundColor="#7f2020" Padding="12,8" />
+        <ScrollView Grid.Row="1" Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+            <HorizontalStackLayout x:Name="SportNav" BackgroundColor="#1a1a1a" Padding="16,0" Spacing="8" VerticalOptions="Center" MinimumHeightRequest="64"/>
+        </ScrollView>
+        <ScrollView Grid.Row="2">
+            <VerticalStackLayout x:Name="MatchList" Padding="24" Spacing="16"/>
+        </ScrollView>
+    </Grid>
+</ContentPage>

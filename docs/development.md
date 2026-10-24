@@ -1,5 +1,25 @@
 # Development
 
+The repository is a monorepo; see [architecture](architecture.md). Run npm commands
+from the repository root. Web source/configuration is under `apps/web`, native
+apps under `apps/android` and `apps/tizen-dotnet`, and Go services under `services`.
+The root npm commands forward to the web workspace.
+
+For native development use the SDK in `global.json`, Go from `.go-version`, a full
+JDK 21, and Android platform 36/build-tools 36.0.0. This prepared cloud machine
+retains those tools under `/workspace/.tools`; activate them with
+`. /workspace/.tools/activate.sh`. Other machines should install those supported
+toolchains normally. The Android SDK workload archives were explicitly signature
+verified before use. Build-generated signing keys are development keys only.
+
+```sh
+dotnet test tests/Streamed.Core.Tests/Streamed.Core.Tests.csproj
+dotnet build apps/tizen-dotnet/StreamedTv.csproj -c Debug
+```
+
+Run `go test ./...` separately in `services/api` and `services/extractor`.
+See [sandbox](sandbox.md) for fixture-only Android startup and screenshot capture.
+
 Run all commands from the repository root. Use the existing checkout in cloud
 tasks; a separate Git worktree is unnecessary.
 
@@ -11,13 +31,14 @@ install the pinned development dependencies (Playwright and Acorn). The browser
 loads a pinned, integrity-checked HLS.js build from jsDelivr for HLS playback;
 Samsung AVPlay is available only on supported TVs.
 
-Copy `data/config.example.js` to `data/config.local.js` once, then adjust its
+Copy `apps/web/data/config.example.js` to `apps/web/data/config.local.js` once, then adjust its
 non-secret URLs. The local file is ignored by Git. The app also works without
 it, but its request in `index.html` will return 404 and Team Hub backend access
 will be disabled. Configuration keys:
 
 | Key | Purpose |
 | --- | --- |
+| `DEMO_MODE` | `true` uses only the bundled sample catalog; public browser builds enable this. Source development defaults to `false`. |
 | `INTERNAL_API_BASE_URL` | Match API origin; defaults to `https://streamed.pk`. |
 | `TEAM_HUB_API_BASE_URL` | Team metadata backend. The example uses the local HTTP origin. |
 | `TEAM_STANDINGS_API_BASE_URL` | Optional standings backend; empty disables lookups. |
@@ -60,7 +81,7 @@ opening `index.html` as a file because the catalog is loaded with `fetch`.
 
 ## Optional Team Hub enrichment
 
-Team search uses `data/team-db.js`, the loaded catalog, and browser-local cached
+Team search uses `apps/web/data/team-db.js`, the loaded catalog, and browser-local cached
 teams. No API key is needed for this base workflow. The Node server exposes:
 
 | Endpoint | Behavior |
@@ -71,7 +92,7 @@ teams. No API key is needed for this base workflow. The Node server exposes:
 | `GET /api/team-hub/backfill?standings=1` | Also request standings when a server-side key is configured. |
 
 Backfill is manual: standings requests can use paid API calls. It writes ignored
-`data/team-backfill.json` and `data/team-standings-cache.json`. Do not call it as
+`apps/web/data/team-backfill.json` and `apps/web/data/team-standings-cache.json`. Do not call it as
 part of routine startup. To enable UI standings, configure the optional backend
 URL and supply its server-side credential separately.
 
@@ -99,6 +120,12 @@ decoding. External providers are blocked; fixtures keep tests deterministic and
 avoid paid API calls. Browser test servers use port 3100 and are stopped by the
 runner. The intentionally skipped desktop AVPlay case is TV-specific.
 
+Browser tests also serve the built browser distribution under `/Streamed/` on
+port 3102 and verify it runs without backend API requests or missing local assets.
+`npm test` checks that ZIPs exclude private configuration, reject symlink inputs,
+include the frontend assets, match their checksum, and reproduce byte for byte.
+Building needs the system `zip` command; package tests also use `unzip`.
+
 On cloud machines with Chromium already installed, use:
 
 ```sh
@@ -123,3 +150,8 @@ screenshots and Playwright traces; the workflow uploads `playwright-report/` and
 `test-results/` for seven days. Inspect the HTML report with
 `npx playwright show-report`. Mark the `test` check as required in GitHub branch
 protection if merges should be blocked on failures.
+
+After tests, the workflow retains a browser build artifact. Version tags publish
+the ZIP and checksum to GitHub Releases; `main` can deploy its tested static site
+to GitHub Pages. See [releases](releases.md) for the one-time Pages setting and
+versioning procedure.

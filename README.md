@@ -1,74 +1,69 @@
 # Streamed
 
-A Samsung/Tizen TV web app for browsing sports, following teams, managing viewer
-profiles, and playing streams. The frontend uses plain HTML, CSS, and JavaScript;
-the optional local Team Hub backend uses only Node.js built-in modules.
+Sports streaming clients and their backend services in one repository. Keeping
+these together makes API changes, fixtures, and cross-platform fixes reviewable
+in the same change; each platform still has its own build and release status.
 
-## Quick start
+| Component | Location | Status |
+| --- | --- | --- |
+| Browser / Tizen web | [`apps/web`](apps/web) | Browser demo and older Tizen 5.5 / Chromium 69 compatibility checks |
+| Tizen .NET / NUI | [`apps/tizen-dotnet`](apps/tizen-dotnet) | Tizen 9 development build; device signing and playback need TV verification |
+| Android / MAUI | [`apps/android`](apps/android) | Experimental port with a separate, fixture-only debug sandbox |
+| Go backend | [`services/api`](services/api) | Sports, profiles, pairing, configuration, and optional cloud integrations |
+| Extractor service | [`services/extractor`](services/extractor) | Separate Go service; production auth/configuration remains separate |
 
-Use Node.js 24 LTS (`nvm use` if you use nvm). The app has no production npm
-dependencies and no frontend build step. Install development tools for tests:
+## Try the sandbox
+
+With Node.js 24 installed, run these from the repository root:
 
 ```sh
-git clone https://github.com/abhishekbindlish1/Streamed.git
-cd Streamed
-cp data/config.example.js data/config.local.js
 npm ci
-npm start
+npm run sandbox
 ```
 
-Visit `http://localhost:3000` in a browser. Choose a viewer profile, then select
-a sport to browse matches. The For You tab fills as you follow teams. Use the
-arrow keys and Enter for TV-style navigation, or a mouse.
-`PORT=8080 npm start` selects another port; `npm run dev` restarts the server
-when its source changes. Do not overwrite an existing local configuration.
+The sandbox listens on port 8080. Open its root path in a local browser, choose
+a profile, and select a sport. It uses sample events and public test videos,
+requires no credentials, and provides matching fixture APIs for the Android
+emulator. See [sandbox instructions](docs/sandbox.md) for Android installation.
 
-The app first requests the match API configured in `data/config.local.js`
-(default: `https://streamed.pk`). If those requests fail or return no matches, it
-loads `data/live-demo.json`. The demo contains sample events and public test
-videos, not current match broadcasts. Only use streams you own or are authorized
-to access.
+For regular web development, copy `apps/web/data/config.example.js` to the ignored
+`apps/web/data/config.local.js` without overwriting existing settings, then use
+`npm start`. Browser packages and GitHub Pages use clean demo-only settings.
 
-## Project layout
+## Builds and tests
 
-```text
-Streamed/
-├── index.html                  # Browser and Tizen entry point
-├── src/
-│   ├── app.js                  # UI, profiles, TV navigation, and playback
-│   ├── api.js                  # Match and Team Hub API clients
-│   ├── compat.js               # Flex layout detection and Samsung remote keys
-│   ├── compat.css              # Older browser layout fallbacks
-│   └── styles.css
-├── assets/profiles/            # Bundled profile avatars
-├── data/
-│   ├── config.example.js       # Copy to ignored config.local.js
-│   ├── live-demo.json          # Fallback catalog and test streams
-│   ├── sources.sample.json     # Example authorized stream catalog
-│   └── team-db.js              # Bundled team metadata
-├── server.js                   # Local HTTP server and Team Hub endpoints
-├── config.xml                  # Tizen widget manifest
-├── tizen_web_project.yaml      # Tizen project and packaging exclusions
-├── icon.png
-├── tests/                      # Unit, Playwright, and real Chromium 69 checks
-├── .github/workflows/ci.yml     # Push and pull request checks
-└── docs/
-    ├── development.md          # Configuration, backend, and validation
-    └── tizen.md                # Samsung TV installation
+```sh
+npm run check
+npm test
+npm run test:browser
+npm run test:legacy
+npm run build
 ```
 
-Run `npm run check` to check JavaScript syntax. See
-[development notes](docs/development.md) for functional smoke checks and optional
-Team Hub enrichment, and [Tizen setup](docs/tizen.md) for device installation.
+Playwright checks desktop and 720p/1080p TV flows. A separate harness exercises
+actual Chromium 69. Native core tests use .NET's test runner and xUnit; backend
+services use Go tests. The pinned .NET SDK is in `global.json`. See
+[development](docs/development.md) and each component's README for prerequisites.
 
-Local settings, credentials, generated caches, and TV build/signing outputs are
-ignored by Git. The included server is a development helper that serves the
-project directory; keep it on a trusted development network.
+GitHub Actions runs the web, native, and backend checks. Matching `vVERSION` tags
+publish tested browser ZIPs and checksums to [Releases](https://github.com/abhishekbindlish1/Streamed/releases).
+Successful main builds can deploy the demo once Pages Source is set to GitHub
+Actions. Native development packages are workflow artifacts, not public TV/store
+releases. See [publishing](docs/releases.md).
 
-GitHub Actions runs syntax checks, Node unit tests, actual Chromium 69 regression
-checks, and Playwright browser tests for desktop and 720p/1080p TV layouts. See
-[testing](docs/development.md#tests-and-ci) for commands and failure reports.
+## Screenshots
 
-The older TV compatibility target is the 2020 Samsung TU series, including
-UE55TU8505, running Tizen 5.5 / Chromium 69. Native playback and signed widget
-installation still need verification on the TV; see [device checks](docs/tizen.md).
+These are real captures of the web fixture sandbox, not renderings of the native
+Tizen UI. Android captures, when available, are labeled separately in the
+[screenshot gallery](docs/screenshots/README.md).
+
+![Browser sandbox catalog](docs/screenshots/web-catalog.png)
+
+![Browser stream selection](docs/screenshots/web-streams.png)
+
+Actual Android emulator capture of the experimental fixture-only client:
+
+![Android sandbox catalog](docs/screenshots/android-catalog.png)
+
+Only use media you own or are authorized to access. No credentials, certificates,
+local profile data, or generated backend caches are included in browser builds.

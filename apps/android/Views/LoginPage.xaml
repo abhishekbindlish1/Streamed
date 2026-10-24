@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="StreamedTv.Views.LoginPage"
+             BackgroundColor="#111111">
+    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="24" Padding="48">
+        <Label Text="StreamedTV" TextColor="#ffffff" FontSize="32" FontAttributes="Bold" HorizontalOptions="Center"/>
+        <Label Text="Sign in on your phone to continue" TextColor="#aaaaaa" FontSize="16" HorizontalOptions="Center"/>
+        <Frame BackgroundColor="#222222" CornerRadius="8" Padding="24" HorizontalOptions="Center">
+            <Label x:Name="PairCode" Text="Loading…" TextColor="#ffffff" FontSize="28" FontFamily="OpenSansRegular" HorizontalOptions="Center"/>
+        </Frame>
+        <Label Text="Visit streamed.tv/pair and enter the code above" TextColor="#888888" FontSize="14" HorizontalOptions="Center"/>
+        <ActivityIndicator x:Name="Spinner" IsRunning="True" Color="#4a90e2" HorizontalOptions="Center"/>
+    </VerticalStackLayout>
+</ContentPage>

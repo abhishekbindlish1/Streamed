@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>Pair your TV — Streamed</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    :root {
+      --bg: #060608;
+      --card: #131318;
+      --card-border: rgba(255,255,255,0.08);
+      --text: #ffffff;
+      --text-secondary: rgba(255,255,255,0.7);
+      --text-tertiary: rgba(255,255,255,0.5);
+      --accent: #f51a31;
+      --success: #18c97e;
+      --danger: #f15252;
+      --input-bg: rgba(255,255,255,0.06);
+      --input-border: rgba(255,255,255,0.20);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+    .brand {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: 32px;
+      font-weight: 700;
+      margin: 0 0 8px;
+      text-align: center;
+    }
+    .subtitle {
+      font-size: 16px;
+      color: var(--text-secondary);
+      text-align: center;
+      margin: 0 0 32px;
+      max-width: 420px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 32px 28px;
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .step {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .step-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 16px 18px;
+      font-size: 28px;
+      font-weight: 700;
+      font-family: "SF Mono", Menlo, monospace;
+      letter-spacing: 6px;
+      text-align: center;
+      text-transform: uppercase;
+      color: var(--text);
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 12px;
+      outline: none;
+      transition: border-color 120ms ease;
+    }
+    input[type="text"]:focus {
+      border-color: var(--text);
+    }
+    .gsi-host {
+      display: flex;
+      justify-content: center;
+      min-height: 44px;
+    }
+    .gsi-status {
+      font-size: 14px;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+    .gsi-status.signed-in {
+      color: var(--success);
+    }
+    button.primary {
+      width: 100%;
+      padding: 14px 18px;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--bg);
+      background: var(--text);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: opacity 120ms ease, transform 80ms ease;
+    }
+    button.primary:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    button.primary:not(:disabled):hover { opacity: 0.92; }
+    button.primary:not(:disabled):active { transform: scale(0.98); }
+    .result {
+      margin-top: 24px;
+      padding: 16px 18px;
+      border-radius: 12px;
+      font-size: 14px;
+      text-align: center;
+      max-width: 420px;
+      width: 100%;
+    }
+    .result.success {
+      background: rgba(24, 201, 126, 0.12);
+      border: 1px solid rgba(24, 201, 126, 0.4);
+      color: #5ee2a4;
+    }
+    .result.error {
+      background: rgba(241, 82, 82, 0.12);
+      border: 1px solid rgba(241, 82, 82, 0.4);
+      color: #ff8a8a;
+    }
+    .hint {
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--text-tertiary);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="brand">STREAMED</div>
+  <h1>Pair your TV</h1>
+  <p class="subtitle">Enter the 6-character code shown on your TV, then sign in with Google to link this device to your account.</p>
+
+  <form class="card" id="pair-form" onsubmit="return false;">
+    <div class="step">
+      <div class="step-label">1. Code from your TV</div>
+      <input
+        type="text"
+        id="code-input"
+        autocomplete="off"
+        autocapitalize="characters"
+        spellcheck="false"
+        maxlength="6"
+        placeholder="ABCDEF"
+      />
+    </div>
+
+    <div class="step">
+      <div class="step-label">2. Sign in with Google</div>
+      <div class="gsi-host" id="gsi-host"></div>
+      <div class="gsi-status" id="gsi-status">Waiting for Google sign-in…</div>
+    </div>
+
+    <button class="primary" id="link-btn" disabled>Link this TV</button>
+  </form>
+
+  <div id="result" class="result" style="display:none;"></div>
+
+  <div class="hint">Once linked, return to your TV — it will pick up the connection within a few seconds.</div>
+
+  <script>
+    // Server origin is whatever served this page (we mount the page on
+    // the same Cloud Run service that exposes /v1/auth/*). Using a
+    // relative API path avoids any CORS surprises.
+    const API_BASE = "";
+
+    // Embedded by the Go server at request time so we don't have to
+    // hardcode the OAuth client ID into the static HTML — keeps the
+    // value in one place (deploy.sh / GOOGLE_CLIENT_ID env var).
+    // Fallback to the literal value if the page is opened standalone.
+    const GOOGLE_CLIENT_ID = "{{GOOGLE_CLIENT_ID}}".indexOf("{{") === 0
+      ? "1057053643049-s9n6b46p4eu8fq887b7f724282t3broa.apps.googleusercontent.com"
+      : "{{GOOGLE_CLIENT_ID}}";
+
+    let googleIdToken = null;
+
+    const codeInput = document.getElementById("code-input");
+    const linkBtn = document.getElementById("link-btn");
+    const gsiStatus = document.getElementById("gsi-status");
+    const resultBox = document.getElementById("result");
+
+    function refreshLinkButton() {
+      const codeOk = codeInput.value.trim().length === 6;
+      const signedIn = !!googleIdToken;
+      linkBtn.disabled = !(codeOk && signedIn);
+    }
+
+    codeInput.addEventListener("input", () => {
+      // Force uppercase as the user types — server normalizes too,
+      // but visual feedback matches the TV display.
+      codeInput.value = codeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      refreshLinkButton();
+    });
+
+    function showResult(kind, msg) {
+      resultBox.style.display = "block";
+      resultBox.className = "result " + kind;
+      resultBox.textContent = msg;
+    }
+
+    async function submitClaim() {
+      const code = codeInput.value.trim();
+      if (!googleIdToken || !code) return;
+      linkBtn.disabled = true;
+      linkBtn.textContent = "Linking…";
+      try {
+        const resp = await fetch(API_BASE + "/v1/auth/pair/claim", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code, googleIdToken }),
+        });
+        if (resp.ok) {
+          showResult("success", "TV linked! You can return to your TV — it will load your account in a few seconds.");
+          linkBtn.textContent = "Linked";
+          codeInput.disabled = true;
+        } else {
+          let detail = "";
+          try { detail = (await resp.json()).error || ""; } catch (e) {}
+          showResult("error",
+            "Couldn't link this code (" + resp.status + "): " + (detail || resp.statusText) + ". Get a fresh code from your TV and try again.");
+          linkBtn.textContent = "Link this TV";
+          refreshLinkButton();
+        }
+      } catch (err) {
+        showResult("error", "Network error: " + (err && err.message ? err.message : err));
+        linkBtn.textContent = "Link this TV";
+        refreshLinkButton();
+      }
+    }
+
+    linkBtn.addEventListener("click", submitClaim);
+
+    // Google Identity Services callback — fires after the user
+    // completes the sign-in popup. credential is the ID token we
+    // forward to the backend's /v1/auth/pair/claim.
+    window.handleGoogleCredential = function (response) {
+      googleIdToken = response.credential;
+      gsiStatus.classList.add("signed-in");
+      gsiStatus.textContent = "✓ Signed in with Google";
+      refreshLinkButton();
+    };
+
+    // Wait for the GSI script to load, then render the button.
+    function waitForGsi(cb) {
+      if (window.google && window.google.accounts && window.google.accounts.id) {
+        cb();
+      } else {
+        setTimeout(() => waitForGsi(cb), 50);
+      }
+    }
+    waitForGsi(() => {
+      google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: window.handleGoogleCredential,
+      });
+      google.accounts.id.renderButton(
+        document.getElementById("gsi-host"),
+        { theme: "filled_black", size: "large", text: "signin_with", shape: "pill" }
+      );
+    });
+  </script>
+</body>
+</html>

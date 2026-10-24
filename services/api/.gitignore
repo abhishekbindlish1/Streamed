@@ -1,0 +1,23 @@
+# Build artifacts
+bin/
+*.exe
+*.test
+*.out
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+
+# Local env
+.env
+.env.local
+
+# Generated assets (poster + logo PNGs from the cron). These are
+# regenerated on demand and can be large; don't commit.
+# Leading slash anchors to backend/ root — without it, the pattern would
+# also match internal/data/ (the source-of-truth alias/stub/openai
+# package) and `gcloud run deploy --source .` would strip it from the
+# upload because it falls back to .gitignore when no .gcloudignore is
+# present. Cost us a failed Cloud Build to figure that out.
+/data/

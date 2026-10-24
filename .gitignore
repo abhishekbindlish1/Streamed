@@ -1,5 +1,5 @@
 # Local configuration and credentials
-/data/config.local.js
+/apps/web/data/config.local.js
 .env
 .env.*
 !.env.example
@@ -10,14 +10,15 @@
 .trust-anchor/
 
 # Generated Team Hub data
-/data/team-backfill.json
-/data/team-standings-cache.json
+/apps/web/data/team-backfill.json
+/apps/web/data/team-standings-cache.json
 
 # Dependencies and logs
 node_modules/
 *.log
 test-results/
 playwright-report/
+dist/
 
 # Tizen build and signing outputs
 /Build/
@@ -28,9 +29,27 @@ playwright-report/
 /.package/
 /.sign/
 *.wgt
+*.tpk
+*.apk
+*.aab
+*.jks
+*.keystore
+bin/
+obj/
+.vs/
+*.user
 
 # Editor and operating-system metadata
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
+
+# Native service executables and generated Tizen project folders
+/services/api/streamed-backend
+/services/extractor/streamed-extractor
+/apps/web/Build/
+/apps/web/Debug/
+/apps/web/Release/
+/apps/web/.sign/
+/docs/screenshots/android-failure.png

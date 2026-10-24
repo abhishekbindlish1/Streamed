@@ -1,0 +1,71 @@
+<Project Sdk="Tizen.NET.Sdk/1.2.1">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- Tizen 9.0 reference assemblies. Confirmed: Tizen.NET.API9 9.0.0.16760 nupkg lays out under build/tizen90/ -->
+    <TargetFramework>tizen90</TargetFramework>
+    <RootNamespace>StreamedTv</RootNamespace>
+    <AssemblyName>StreamedTv</AssemblyName>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <!-- NETSDK1023 fires because the Tizen SDK implicitly references Tizen.NET; we explicitly pin the version to 9.0 on purpose. -->
+    <NoWarn>$(NoWarn);NETSDK1023</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Pin Tizen.NET to the 9.0 metapackage so we get Tizen.NET.API9 9.0.0.16760 reference assemblies. -->
+    <!-- Without this the SDK floats to the latest available (currently 13.x), which doesn't match the Tizen 9.0 device runtime. -->
+    <PackageReference Include="Tizen.NET" Version="9.0.0.16760" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Resources/AppIcon/icon.png" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Resources/Fonts/Inter-Regular.ttf" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Resources/Fonts/Inter-Medium.ttf" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Resources/Fonts/Inter-SemiBold.ttf" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Resources/Fonts/Inter-Bold.ttf" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Tizen looks for the app icon at shared/res/{name} inside the .tpk root,
+         not in bin/. Files under shared/** are automatically packaged at the
+         .tpk root by Tizen.NET.Sdk, so this entry just makes sure the file is
+         in source control + tracked by the build. The manifest references it
+         as <icon>icon.png</icon> (resolved relative to shared/res/). -->
+    <None Include="shared/res/icon.png" CopyToOutputDirectory="PreserveNewest">
+      <TargetPath>shared/res/icon.png</TargetPath>
+    </None>
+    <None Include="shared/res/brand_logo.jpg" CopyToOutputDirectory="PreserveNewest">
+      <TargetPath>shared/res/brand_logo.jpg</TargetPath>
+    </None>
+    <!-- Sport-specific hero banner art. Wide cinematic 4.45:1 to fit the
+         hero card without distortion. ResolvePosterUrl in HeroView falls
+         back to these (by match.Sport) when the upstream poster URL is empty. -->
+    <None Include="shared/res/hero_football.jpg" CopyToOutputDirectory="PreserveNewest">
+      <TargetPath>shared/res/hero_football.jpg</TargetPath>
+    </None>
+    <None Include="shared/res/hero_cricket.jpg" CopyToOutputDirectory="PreserveNewest">
+      <TargetPath>shared/res/hero_cricket.jpg</TargetPath>
+    </None>
+    <None Include="shared/res/hero_basketball.jpg" CopyToOutputDirectory="PreserveNewest">
+      <TargetPath>shared/res/hero_basketball.jpg</TargetPath>
+    </None>
+    <None Include="shared/res/hero_foryou.jpg" CopyToOutputDirectory="PreserveNewest">
+      <TargetPath>shared/res/hero_foryou.jpg</TargetPath>
+    </None>
+    <None Include="shared/res/profile_image_1.jpg" CopyToOutputDirectory="PreserveNewest">
+      <TargetPath>shared/res/profile_image_1.jpg</TargetPath>
+    </None>
+    <None Include="shared/res/profile_image_2.jpg" CopyToOutputDirectory="PreserveNewest">
+      <TargetPath>shared/res/profile_image_2.jpg</TargetPath>
+    </None>
+    <None Include="shared/res/profile_image_3.jpg" CopyToOutputDirectory="PreserveNewest">
+      <TargetPath>shared/res/profile_image_3.jpg</TargetPath>
+    </None>
+    <None Include="shared/res/profile_image_4.jpg" CopyToOutputDirectory="PreserveNewest">
+      <TargetPath>shared/res/profile_image_4.jpg</TargetPath>
+    </None>
+    <None Include="shared/res/profile_image_5.jpg" CopyToOutputDirectory="PreserveNewest">
+      <TargetPath>shared/res/profile_image_5.jpg</TargetPath>
+    </None>
+    <None Include="shared/res/pairing_qr.png" CopyToOutputDirectory="PreserveNewest">
+      <TargetPath>shared/res/pairing_qr.png</TargetPath>
+    </None>
+  </ItemGroup>
+</Project>

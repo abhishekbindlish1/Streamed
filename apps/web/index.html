@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#070707">
+    <title>Streamed TV</title>
+    <link rel="stylesheet" href="src/styles.css">
+    <link rel="stylesheet" href="src/compat.css">
+  </head>
+  <body>
+    <aside id="demoNotice" class="demo-notice" role="note" hidden>Demo: sample events and public test videos.</aside>
+    <main class="app profile-mode" aria-label="Match stream browser">
+      <section id="profileView" class="profile-view" aria-label="Choose profile">
+        <div class="profile-panel">
+          <p class="profile-kicker">Streamed</p>
+          <h1 id="profileTitle">Who's watching?</h1>
+          <div id="profileList" class="profile-list" aria-live="polite"></div>
+          <div id="profileAvatarPicker" class="profile-avatar-picker" hidden></div>
+          <div class="profile-actions">
+            <button id="profileManageButton" class="profile-action-button" type="button" data-focusable="true">Manage Profiles</button>
+            <button id="profileDoneButton" class="profile-action-button primary" type="button" data-focusable="true" hidden>Done</button>
+          </div>
+        </div>
+      </section>
+
+      <header class="shell-top">
+        <div class="brand">STREAMED</div>
+        <nav id="sportsList" class="sports-list" aria-label="Sports list"></nav>
+        <div class="top-actions">
+          <button id="searchButton" class="search-button" type="button" aria-label="Search">Search</button>
+          <div class="clock" id="clock"></div>
+          <button id="profileButton" class="profile-dot" type="button" aria-label="Switch profile">A</button>
+        </div>
+      </header>
+
+      <section class="content" aria-label="Matches">
+        <div id="heroFeature" class="hero-feature"></div>
+        <section class="rail" aria-label="Available matches">
+          <div class="rail-header">
+            <div>
+              <p class="eyebrow" id="activeSportLabel">Live</p>
+              <h1 id="pageTitle">Matches</h1>
+            </div>
+            <div class="status" id="statusText">Loading matches...</div>
+          </div>
+          <div id="matchesGrid" class="matches-grid" aria-live="polite"></div>
+        </section>
+      </section>
+
+      <section id="searchOverlay" class="search-overlay" aria-label="Search" hidden>
+        <div class="search-panel">
+          <aside class="search-compose" aria-label="Search input and keyboard">
+            <button id="searchCloseButton" class="icon-button" type="button" aria-label="Close search">Back</button>
+            <label class="search-box" for="searchInput">
+              <span>Search</span>
+              <input id="searchInput" type="search" autocomplete="off" placeholder="Teams, leagues, sports, scores">
+            </label>
+            <div id="searchKeyboard" class="search-keyboard" aria-label="On-screen keyboard"></div>
+          </aside>
+          <div id="searchResults" class="search-results" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="teamHubOverlay" class="team-hub-overlay" aria-label="Team Hub" hidden>
+        <div class="team-hub-view">
+          <header class="team-hub-header">
+            <button id="teamHubCloseButton" class="icon-button" type="button" data-focusable="true" aria-label="Close Team Hub">Back</button>
+            <div>
+              <p class="eyebrow">Team Hub</p>
+              <h2>Followed teams</h2>
+            </div>
+          </header>
+          <div id="teamHubBody" class="team-hub-body" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="streamPickerOverlay" class="stream-picker-overlay" aria-label="Available streams" hidden>
+        <div class="stream-picker-view">
+          <header class="stream-picker-header">
+            <button id="streamPickerCloseButton" class="icon-button" type="button" data-focusable="true" aria-label="Back to matches">Back</button>
+            <div>
+              <p class="eyebrow" id="streamPickerLeague"></p>
+              <h2 id="streamPickerTitle">Available streams</h2>
+            </div>
+          </header>
+          <div id="streamPickerBody" class="stream-picker-body" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="playerView" class="player-view" aria-label="Video player" hidden>
+        <object id="avplayPlayer" class="avplay-player" type="application/avplayer" hidden></object>
+        <video id="videoPlayer" class="video-player" autoplay playsinline tabindex="-1"></video>
+        <iframe id="embedPlayer" class="embed-player" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" referrerpolicy="no-referrer" tabindex="-1" allowfullscreen hidden></iframe>
+        <div class="player-overlay">
+          <button id="backButton" class="icon-button" type="button" data-focusable="true" aria-label="Back to matches">Back</button>
+          <div class="player-meta">
+            <p class="eyebrow" id="playerLeague"></p>
+            <h2 id="playerTitle"></h2>
+            <span id="playerStreamLabel" class="player-stream-label"></span>
+          </div>
+          <div id="playerControls" class="player-controls" aria-label="Player controls">
+            <button id="playerPrevButton" class="player-control-button" type="button" data-focusable="true">Previous stream</button>
+            <button id="playerPlayButton" class="player-control-button" type="button" data-focusable="true">Pause</button>
+            <button id="playerNextButton" class="player-control-button" type="button" data-focusable="true">Next stream</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <script src="data/config.local.js"></script>
+    <script src="data/team-db.js"></script>
+    <script src="$WEBAPIS/webapis/webapis.js" onerror="this.remove()"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.7.3/dist/hls.min.js" integrity="sha384-cciJ0zi8d1uMKC2zJd7jvPY4HQt7W4ByUI/FlMkltvBi31aW61rcpVBhpmW8/NwX" crossorigin="anonymous"></script>
+    <script src="src/compat.js"></script>
+    <script src="src/api.js"></script>
+    <script src="src/app.js"></script>
+  </body>
+</html>

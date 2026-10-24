@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns="http://tizen.org/ns/packages" api-version="9.0" package="com.streamed.tv.dotnet" version="1.13.33">
+  <profile name="tv" />
+  <ui-application appid="com.streamed.tv.dotnet" exec="StreamedTv.dll" type="dotnet" multiple="false" taskmanage="true" nodisplay="false">
+    <label>Streamed</label>
+    <icon>icon.png</icon>
+  </ui-application>
+  <privileges>
+    <privilege>http://tizen.org/privilege/internet</privilege>
+    <privilege>http://tizen.org/privilege/mediastorage</privilege>
+    <!-- WebView (chromium-efl) may issue background loads from the renderer; this is the
+         standard companion privilege used by Tizen sample WebView apps. -->
+    <privilege>http://tizen.org/privilege/network.get</privilege>
+  </privileges>
+</manifest>

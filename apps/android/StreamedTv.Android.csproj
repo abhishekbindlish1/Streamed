@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <RootNamespace>StreamedTv</RootNamespace>
+    <AssemblyName>StreamedTv.Android</AssemblyName>
+    <ApplicationId>com.streamed.tv.android</ApplicationId>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <OutputType>Exe</OutputType>
+    <SupportedOSPlatformVersion>26</SupportedOSPlatformVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(SandboxMode)' == 'true'">
+    <DefineConstants>$(DefineConstants);SANDBOX</DefineConstants>
+    <ApplicationId>com.streamed.tv.android.sandbox</ApplicationId>
+  </PropertyGroup>
+  <Target Name="RejectReleaseSandbox" BeforeTargets="PrepareForBuild" Condition="'$(SandboxMode)' == 'true' and '$(Configuration)' != 'Debug'">
+    <Error Text="Sandbox mode is only allowed for Debug builds." />
+  </Target>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.120" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <MauiAsset Include="Resources/Raw/**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,10 @@
+.git
+.github
+.vscode
+# Anchor to context root — `data/` alone would also match internal/data/
+# (the alias/stub/openai package) and break the build.
+/data/
+README.md
+deploy.sh
+*.md
+.gitignore

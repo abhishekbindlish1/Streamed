@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="StreamedTv.Views.PlayerPage"
+             BackgroundColor="#000000"
+             Shell.NavBarIsVisible="False">
+    <Grid RowDefinitions="*,48">
+        <WebView x:Name="Player" Grid.Row="0" BackgroundColor="#000000"/>
+        <HorizontalStackLayout Grid.Row="1" BackgroundColor="#1a1a1a" Padding="16,0" Spacing="16" VerticalOptions="Center">
+            <Button x:Name="BackBtn" Text="← Back" TextColor="#ffffff" BackgroundColor="Transparent" Clicked="OnBackClicked"/>
+            <Label x:Name="StreamTitleLabel" Text="Stream" TextColor="#cccccc" FontSize="14" VerticalOptions="Center"/>
+        </HorizontalStackLayout>
+    </Grid>
+</ContentPage>
