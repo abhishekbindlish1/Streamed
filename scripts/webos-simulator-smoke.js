@@ -72,6 +72,9 @@ function targets() {
   await remote(461);
   assert.equal(await frame.locator('#playerView').evaluate(view => view.hidden), true);
   assert.equal(await frame.locator('#videoPlayer').evaluate(video => video.paused), true);
+  assert.equal(await frame.locator('#streamPickerOverlay').evaluate(view => view.hidden), false);
+  await remote(461);
+  assert.equal(await frame.locator('#streamPickerOverlay').evaluate(view => view.hidden), true);
   console.log('LG Simulator: real platform API, remote selection, decoded MP4, pause/resume and Back passed.');
 })().catch(async error => {
   console.error('::error::LG Simulator test: ' + error.message);

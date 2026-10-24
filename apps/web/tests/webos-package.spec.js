@@ -46,6 +46,10 @@ test('webOS packaged file app plays offline video and handles remote/lifecycle c
     await remote(461);
     await expect(page.locator('#playerView')).toBeHidden();
     await expect(page.locator('#videoPlayer')).toHaveJSProperty('paused', true);
+    await expect(page.locator('#streamPickerOverlay')).toBeVisible();
+    await remote(461);
+    await expect(page.locator('#streamPickerOverlay')).toBeHidden();
+    expect(await page.evaluate(() => window.platformBackCalls)).toBe(0);
     await startVideo();
     await page.evaluate(() => {
       Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
@@ -53,6 +57,14 @@ test('webOS packaged file app plays offline video and handles remote/lifecycle c
     });
     await expect(page.locator('#playerView')).toBeHidden();
     await expect(page.locator('#videoPlayer')).toHaveJSProperty('paused', true);
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await expect(page.locator('#streamPickerOverlay')).toBeVisible();
+    await remote(461);
+    await expect(page.locator('#streamPickerOverlay')).toBeHidden();
+    expect(await page.evaluate(() => window.platformBackCalls)).toBe(0);
     await remote(461);
     expect(await page.evaluate(() => window.platformBackCalls)).toBe(1);
     expect(network).toEqual([]);

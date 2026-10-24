@@ -87,8 +87,9 @@ and TizenFX TV API 12.12.0. This does not by itself validate this app's NUI call
 This cloud has no `/dev/kvm`. The current emulator explicitly rejected startup
 without hardware virtualization, including when software mode was requested.
 The `samsung_emulator` CI job therefore uses an accelerated Ubuntu runner. Its
-first run did not connect to SDB within the boot deadline; that is an unresolved
-VM startup check, not a passed native-app test. The job captures launch logs and a
+first run found a missing SDL 1.2 runtime; the runner now installs Ubuntu's
+`libsdl1.2debian` compatibility package. Check the actual workflow result before
+claiming native runtime validation. The job captures launch logs and a
 desktop screenshot, installs the unchanged development TPK, and checks startup
 only after the VM connects. Native playback and physical device acceptance remain
 separate. Chromium 69 checks cover browser compatibility, not the entire Tizen OS.

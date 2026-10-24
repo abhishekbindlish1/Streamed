@@ -34,4 +34,3 @@ preview with its offline catalog. It is separate from the browser and Android
 captures below; it is not a physical TV capture.
 
 ![LG Simulator catalog](lg-simulator-catalog.png)
-
