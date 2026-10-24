@@ -68,6 +68,11 @@ jobs:
   samsung_emulator:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    env:
+      TIZEN_AUTHOR_P12_BASE64: ${{ secrets.TIZEN_AUTHOR_P12_BASE64 }}
+      TIZEN_AUTHOR_PASSWORD: ${{ secrets.TIZEN_AUTHOR_PASSWORD }}
+      TIZEN_DISTRIBUTOR_P12_BASE64: ${{ secrets.TIZEN_DISTRIBUTOR_P12_BASE64 }}
+      TIZEN_DISTRIBUTOR_PASSWORD: ${{ secrets.TIZEN_DISTRIBUTOR_PASSWORD }}
     steps:
       - uses: actions/checkout@v6
       - name: Free space for the vendor SDK and VM

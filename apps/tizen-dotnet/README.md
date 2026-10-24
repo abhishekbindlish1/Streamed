@@ -19,6 +19,16 @@ or release. Different development authors require uninstalling the previous app.
 The SDK developer CA expires January 1, 2027; the release collector rejects expired
 certificates and records the earliest expiry in `BUILD-INFO.json`.
 
+For an existing Samsung profile, set all four GitHub Actions repository secrets:
+`TIZEN_AUTHOR_P12_BASE64`, `TIZEN_AUTHOR_PASSWORD`,
+`TIZEN_DISTRIBUTOR_P12_BASE64`, and `TIZEN_DISTRIBUTOR_PASSWORD`.
+The P12 secrets are base64-encoded file contents. Supply a profile authorized for
+the target TV/emulator, including its device authorization. The build decodes keys
+only into a private temporary directory, removes them on exit, and redacts signing
+values from logs. Never commit profiles or paste passwords into an issue/chat.
+The same environment variables work locally. A partial configuration fails instead
+of silently falling back to SDK signing.
+
 Use your Samsung device/certificate profile for physical TV installation. The
 accelerated `samsung_emulator` job boots the official TV image and checks native
 TPK installation and startup. See [TV testing](../../docs/tv-testing.md) for the

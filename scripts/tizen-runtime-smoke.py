@@ -21,11 +21,11 @@ launcher = None
 serial = None
 
 
-def command(arguments, name, timeout=45):
+def command(arguments, name, timeout=45, required=True):
     result = subprocess.run([str(x) for x in arguments], capture_output=True, env=env, timeout=timeout)
     text = (result.stdout + result.stderr).decode(errors='replace')
     (output / (name + '.log')).write_text(text)
-    if result.returncode:
+    if required and result.returncode:
         raise RuntimeError(name + ' failed: ' + text[-2200:])
     return text
 
@@ -51,14 +51,18 @@ try:
     if not serial:
         raise RuntimeError('Samsung VM did not connect to SDB within five minutes')
     command([sdb, '-s', serial, 'capability'], 'sdb-capability')
-    command([sdb, '-s', serial, 'shell', 'date', '-u'], 'device-clock')
+    command([sdb, '-s', serial, 'help'], 'sdb-device-commands', required=False)
+    command([sdb, '-s', serial, 'shell', 'date', '-u'], 'device-clock', required=False)
+    duid = command([sdb, '-s', serial, 'shell', '0', 'getduid'], 'emulator-duid', required=False)
+    if duid.strip():
+        print('::notice::Samsung CI emulator DUID: ' + duid.strip().replace('\n', '%0A'), flush=True)
     packages = list((root / 'apps/tizen-dotnet/bin/Release/tizen90').glob('*.tpk'))
     if len(packages) != 1:
         raise RuntimeError('Expected exactly one freshly built native TPK')
     # This is the built development package, not a re-signed or modified test copy.
-    # The .NET first-app guide specifies SDB's native TPK installer. The TV
-    # web CLI routes "tizen install" through wascmd instead of native pkgcmd.
-    result = command([sdb, '-s', serial, 'install', packages[0]], 'install-native-tpk', timeout=120)
+    # This TV image disables the generic SDB installer/shell. The TV CLI reaches
+    # its package manager and reports actual certificate/install failures.
+    result = command([tizen, 'install', '-n', packages[0].name, '-s', serial, '--', packages[0].parent], 'install-native-tpk', timeout=120)
     print('::notice::Samsung TPK install: ' + result[-1800:].replace('\n', '%0A'), flush=True)
     command([tizen, 'run', '-p', 'com.streamed.tv.dotnet', '-s', serial], 'launch-native-tpk', timeout=90)
     time.sleep(15)
@@ -97,6 +101,13 @@ except Exception as error:
         if path.exists():
             text = path.read_text(errors='replace')[-4500:]
             print('::notice::Samsung ' + name + ': ' + text.replace('%', '%25').replace('\n', '%0A'), flush=True)
+    for path in data.rglob('emulator.klog'):
+        text = path.read_text(errors='replace')
+        lines = [line for line in text.splitlines() if any(word in line.lower() for word in
+                 ['system clock', 'rtc', 'certificate', 'signature', 'pkgmgr', 'denied'])]
+        excerpt = '\n'.join(lines[-45:])
+        (output / 'kernel-diagnostics.log').write_text(excerpt)
+        print('::notice::Samsung kernel clock/security: ' + excerpt.replace('%', '%25').replace('\n', '%0A'), flush=True)
     for path in list(data.rglob('*.log'))[-6:]:
         if 'emulator' in str(path):
             full = path.read_text(errors='replace')
