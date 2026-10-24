@@ -22,9 +22,11 @@ public partial class PlayerPage : ContentPage, IQueryAttributable
         };
         NativePlayer.PositionChanged += (_, _) => UpdateNativeStatus();
         NativePlayer.StateChanged += (_, _) => UpdateNativeStatus();
-        NativePlayer.MediaFailed += (_, _) =>
+        NativePlayer.MediaFailed += (_, failure) =>
         {
             if (!_active) return;
+            var detail = System.Text.RegularExpressions.Regex.Replace(failure.ErrorMessage ?? "Playback error", @"https?://\S+", "[media URL]");
+            AppLog.Error("StreamedTv", "Native playback failed: " + detail);
             PlaybackStatus.Text = "Could not play this video. Retry or choose another stream.";
             RetryBtn.IsVisible = true;
             RetryBtn.Focus();
@@ -99,6 +101,7 @@ public partial class PlayerPage : ContentPage, IQueryAttributable
             MediaElementState.Paused => "Paused · " + NativePlayer.Position.ToString(@"mm\:ss"),
             MediaElementState.Buffering => "Buffering…",
             MediaElementState.Stopped => "Stopped",
+            MediaElementState.Failed => "Could not play this video. Retry or choose another stream.",
             _ => "Loading…"
         };
     }

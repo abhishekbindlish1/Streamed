@@ -131,6 +131,8 @@ namespace StreamedTv.Views
                     : "No matches available right now.");
                 return;
             }
+            if (_selectedMatchId is null || !matches.Any(match => match.Id == _selectedMatchId))
+                _selectedMatchId = live.Concat(upcoming).Concat(recent).First().Id;
 
             if (live.Count > 0)
             {
@@ -188,7 +190,7 @@ namespace StreamedTv.Views
 
             StyleRemoteButton(card);
             card.Clicked += async (_, _) => await OnMatchTappedAsync(match, ct);
-            if (match.Id == _selectedMatchId) card.Loaded += (_, _) => card.Focus();
+            if (match.Id == _selectedMatchId) card.Loaded += (_, _) => Dispatcher.Dispatch(() => card.Focus());
             MatchList.Children.Add(card);
         }
 

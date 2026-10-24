@@ -16,6 +16,12 @@ namespace StreamedTv
                 .UseMauiCommunityToolkitMediaElement(false, options => options.SetDefaultAndroidViewType(AndroidViewType.TextureView));
 
 #if ANDROID
+            builder.ConfigureMauiHandlers(handlers => handlers.AddHandler<ContentPage, Platforms.Android.BoundedPageHandler>());
+            Microsoft.Maui.Handlers.ButtonHandler.Mapper.AppendToMapping("RemoteFocus", (handler, _) =>
+            {
+                handler.PlatformView.Focusable = true;
+                handler.PlatformView.FocusableInTouchMode = true;
+            });
             Microsoft.Maui.Handlers.WebViewHandler.Mapper.AppendToMapping("StreamedPlayback", (handler, _) =>
             {
                 handler.PlatformView.Settings.JavaScriptEnabled = true;

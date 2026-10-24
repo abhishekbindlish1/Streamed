@@ -86,6 +86,21 @@ def playing_position(root):
     return 0
 
 
+def assert_bounded_page_layout():
+    size = command('shell', 'wm', 'size').decode(errors='replace')
+    dimensions = re.findall(r'(\d+)x(\d+)', size)
+    assert dimensions, 'Android did not report a display size'
+    limit = max(map(int, dimensions[-1])) * 10
+    hierarchy = command('shell', 'dumpsys', 'activity', 'top').decode(errors='replace')
+    for line in hierarchy.splitlines():
+        if 'ContentViewGroup{' not in line and 'ShellPageContainer{' not in line and 'BoundedPageView{' not in line:
+            continue
+        bounds = re.search(r'(-?\d+),(-?\d+)-(-?\d+),(-?\d+)', line)
+        if bounds:
+            left, top, right, bottom = map(int, bounds.groups())
+            assert right - left < limit and bottom - top < limit, 'Page layout escaped the device viewport: ' + line.strip()
+
+
 def test_playback(name, label):
     focus_match(name)
     command('logcat', '-c')
@@ -144,6 +159,7 @@ try:
         launch()
         wait_for(lambda root: has_text(root, 'SANDBOX') and has_text(root, 'Metro Strikers'),
                  'Sandbox did not render fixture matches')
+        assert_bounded_page_layout()
         snapshot('android-catalog.png')
         test_playback('Metro Strikers', 'hls')
         test_playback('Northern XI', 'mp4')
