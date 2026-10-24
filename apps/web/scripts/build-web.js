@@ -22,7 +22,7 @@ async function buildWeb(options = {}) {
   if (!/^\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$/.test(version)) throw new Error('Invalid package version');
   const releaseTag = options.releaseTag === undefined ? process.env.RELEASE_TAG : options.releaseTag;
   if (releaseTag && releaseTag !== `v${version}`) throw new Error(`Tag ${releaseTag} must match package version v${version}`);
-  const commit = options.commit || process.env.GITHUB_SHA || execFileSync('git', ['rev-parse', 'HEAD'], { cwd: sourceRoot, encoding: 'utf8' }).trim();
+  const commit = options.commit || execFileSync('git', ['rev-parse', 'HEAD'], { cwd: sourceRoot, encoding: 'utf8' }).trim();
   await fs.rm(outputRoot, { recursive: true, force: true });
   const site = path.join(outputRoot, 'site');
   const releases = path.join(outputRoot, 'releases');

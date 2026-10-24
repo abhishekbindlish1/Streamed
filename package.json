@@ -8,7 +8,7 @@
     "dev": "npm --workspace streamed-tv run dev",
     "build": "npm --workspace streamed-tv run build",
     "check": "npm --workspace streamed-tv run check",
-    "test": "node --test tests/sandbox.test.js && npm --workspace streamed-tv test",
+    "test": "node --test tests/*.test.js && npm --workspace streamed-tv test",
     "test:browser": "npm --workspace streamed-tv run test:browser",
     "test:legacy": "npm --workspace streamed-tv run test:legacy",
     "test:dotnet": "dotnet test tests/Streamed.Core.Tests/Streamed.Core.Tests.csproj",

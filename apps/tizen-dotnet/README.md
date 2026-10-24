@@ -23,3 +23,7 @@ backend configuration tasks. HTTPS uses the platform trust store.
 
 Historical documents are preserved under `docs/imported-native`; their old local
 paths and scaffold notes are not the current build instructions.
+
+Development TPKs are published alongside browser/APK downloads on the repository’s
+[Releases page](https://github.com/abhishekbindlish1/Streamed/releases), starting
+with the all-platform preview. Check INSTALL.md before installing on a TV.

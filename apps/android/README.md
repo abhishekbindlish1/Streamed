@@ -30,3 +30,8 @@ The APK has been built, installed, and startup-checked in a real API 28 software
 emulator against the local fixture API. Its capture is in `docs/screenshots`.
 This verifies sandbox catalog rendering, not production login, polished card
 sizing, TV remote parity, or external media playback.
+
+The all-platform preview release includes a normal ARM64 device development APK
+and a separate x64 emulator sandbox APK. Both are debug signed. See
+[release downloads](../../docs/releases.md#native-downloads) for compatibility and
+update-signing limitations.

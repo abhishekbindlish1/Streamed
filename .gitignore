@@ -53,3 +53,6 @@ Thumbs.db
 /apps/web/Release/
 /apps/web/.sign/
 /docs/screenshots/android-failure.png
+/release-native/
+/incoming/
+/release/

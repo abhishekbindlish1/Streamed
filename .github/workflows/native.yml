@@ -5,6 +5,7 @@ on:
     branches: ['**']
   pull_request:
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -15,13 +16,13 @@ concurrency:
 
 jobs:
   backend:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         service: [api, extractor]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           go-version: '1.27.3'
           cache-dependency-path: services/${{ matrix.service }}/go.sum
@@ -29,40 +30,47 @@ jobs:
         working-directory: services/${{ matrix.service }}
 
   dotnet:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
       - run: dotnet test tests/Streamed.Core.Tests/Streamed.Core.Tests.csproj
       - name: Compile Tizen 9 development package
         run: dotnet build apps/tizen-dotnet/StreamedTv.csproj -c Release
-      - uses: actions/upload-artifact@v4
+      - name: Prepare Tizen download and provenance
+        run: node scripts/release-assets.js tizen
+      - uses: actions/upload-artifact@v6
         with:
-          name: tizen-dotnet-development-only
-          path: apps/tizen-dotnet/bin/Release/tizen90/*.tpk
+          name: tizen-distribution
+          path: release-native/tizen/
           if-no-files-found: error
 
   android:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
       - name: Install MAUI Android and verify package signatures
         run: |
           dotnet workload install maui-android --skip-manifest-update
           bash scripts/verify-dotnet-workloads.sh
+      - name: Set up Android command-line tools
+        uses: android-actions/setup-android@v3
       - name: Install Android platform and build tools
         run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
       - name: Build experimental fixture-only APK
@@ -70,11 +78,6 @@ jobs:
           dotnet build apps/android/StreamedTv.Android.csproj -c Debug
           -p:SandboxMode=true -p:RuntimeIdentifier=android-x64
           -p:EmbedAssembliesIntoApk=true -p:AndroidPackageFormats=apk
-      - uses: actions/upload-artifact@v4
-        with:
-          name: android-emulator-sandbox-x64
-          path: apps/android/bin/Debug/**/*-Signed.apk
-          if-no-files-found: error
       - name: Allow emulator hardware acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -92,7 +95,22 @@ jobs:
             curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:8080/health
             adb install -r apps/android/bin/Debug/net10.0-android/android-x64/com.streamed.tv.android.sandbox-Signed.apk
             SCREENSHOT_DIR=test-results/android bash scripts/android-smoke.sh
-      - uses: actions/upload-artifact@v4
+      - name: Build ARM64 device development APK
+        run: >-
+          dotnet build apps/android/StreamedTv.Android.csproj -c Debug
+          -p:RuntimeIdentifier=android-arm64
+          -p:EmbedAssembliesIntoApk=true -p:AndroidPackageFormats=apk
+      - name: Verify APK signatures and prepare downloads
+        run: |
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify apps/android/bin/Debug/net10.0-android/android-x64/com.streamed.tv.android.sandbox-Signed.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify apps/android/bin/Debug/net10.0-android/android-arm64/com.streamed.tv.android-Signed.apk
+          node scripts/release-assets.js android
+      - uses: actions/upload-artifact@v6
+        with:
+          name: android-distribution
+          path: release-native/android/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: android-sandbox-screenshots

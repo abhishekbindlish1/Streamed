@@ -14,13 +14,13 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -36,20 +36,20 @@ jobs:
       - name: Browser tests (desktop, 720p TV, 1080p TV)
         run: npm run test:browser
       - name: Save tested browser distribution
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: browser-distribution
           path: apps/web/dist/releases/
           if-no-files-found: error
           retention-days: 14
       - name: Prepare Pages artifact
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && github.event.repository.has_pages == true
         uses: actions/upload-pages-artifact@v3
         with:
           path: apps/web/dist/site
       - name: Upload browser reports and failure screenshots
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: browser-test-results
           path: |
@@ -58,18 +58,38 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  native_release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/native.yml
+    permissions:
+      contents: read
+
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: test
-    runs-on: ubuntu-latest
+    needs: [test, native_release]
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@v7
         with:
           name: browser-distribution
-          path: release
-      - name: Publish versioned browser build
+          path: incoming/browser
+      - uses: actions/download-artifact@v7
+        with:
+          name: tizen-distribution
+          path: incoming/tizen
+      - uses: actions/download-artifact@v7
+        with:
+          name: android-distribution
+          path: incoming/android
+      - name: Check provenance and assemble all-platform release
+        run: node scripts/release-assets.js bundle
+      - name: Publish all platform downloads
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -77,14 +97,17 @@ jobs:
         run: |
           if gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" release/* --clobber
+            gh release edit "$RELEASE_TAG" --notes-file release/INSTALL.md
+          elif [[ "$RELEASE_TAG" == *-* ]]; then
+            gh release create "$RELEASE_TAG" release/* --verify-tag --prerelease --title "Streamed $RELEASE_TAG" --notes-file release/INSTALL.md
           else
-            gh release create "$RELEASE_TAG" release/* --verify-tag --title "Streamed $RELEASE_TAG" --generate-notes
+            gh release create "$RELEASE_TAG" release/* --verify-tag --title "Streamed $RELEASE_TAG" --notes-file release/INSTALL.md
           fi
 
   pages:
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && github.event.repository.has_pages == true
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       pages: write
       id-token: write

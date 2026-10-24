@@ -1,19 +1,21 @@
-# Browser builds and publishing
+# All-platform builds and publishing
 
 The public browser distribution runs without the Node backend or API credentials.
 It uses the bundled demo catalog and public test media, and displays a demo notice.
-It is a browser demo, not a Samsung TV installer. Tizen signing remains a separate
-step; see [TV installation](tizen.md).
+The same release also carries native development packages, described below.
+Browser ZIPs are not TV installers; see [TV installation](tizen.md).
 
 ## Download and run
 
 Download `streamed-web-vVERSION.zip` and `SHA256SUMS` from
-[GitHub Releases](https://github.com/abhishekbindlish1/Streamed/releases/latest).
+[GitHub Releases](https://github.com/abhishekbindlish1/Streamed/releases).
+`v1.0.0` is the original browser-only release. All-platform downloads start with
+`v1.1.0-preview.1`. Preview tags are published as prereleases.
 Keep both files in the same folder and verify the ZIP before extraction:
 
 ```sh
 sha256sum --check SHA256SUMS
-unzip streamed-web-v1.0.0.zip -d streamed-web
+unzip streamed-web-v1.1.0-preview.1.zip -d streamed-web
 cd streamed-web
 python3 -m http.server 8080
 ```
@@ -47,18 +49,20 @@ under a subpath, such as `/Streamed/`; CI exercises that exact layout.
 ## Publish a version
 
 1. Update `version` in `apps/web/package.json` and the root `package-lock.json` together, and commit
-   the change. For the first release, both are already `1.0.0`.
+   the change. For a preview, use a version such as `1.1.0-preview.1`.
 2. Push the commit, then create and push its matching tag:
 
    ```sh
-   git tag v1.0.0
-   git push origin v1.0.0
+   git tag v1.1.0-preview.1
+   git push origin v1.1.0-preview.1
    ```
 
 3. GitHub Actions runs all tests, checks that the tag matches the package version,
-   and publishes the tested ZIP and checksum as a GitHub Release. If validation
+   and builds/tests the native apps and both backend services through a reusable
+   workflow. Only after every required check passes does it publish the browser
+   ZIP, native TPK/APKs, SHA256SUMS, BUILD-INFO.json, and INSTALL.md to one release. If validation
    fails, no release is published. Rerunning a successful tag workflow replaces
-   its two generated assets; it does not move the tag.
+   its generated assets; it does not move the tag.
 
 Every successful push/PR also retains the browser ZIP as a workflow artifact for
 14 days. These artifacts are useful for testing; Releases provide the stable
@@ -73,7 +77,9 @@ In repository **Settings → Pages → Build and deployment → Source**, choose
 repository access. Pages must be available for the repository's visibility/plan.
 Then rerun the failed `pages` job, or run the CI workflow manually on `main`.
 
-After tests pass on `main`, the Pages job deploys the tested `apps/web/dist/site/` artifact.
+After tests pass on `main` and Pages is enabled, the Pages job deploys the tested
+`apps/web/dist/site/` artifact. The deployment job is skipped while the repository
+has no Pages site; this does not skip application tests.
 Pull requests and tags never deploy the demo. The expected project URL, once
 deployment succeeds, is `https://abhishekbindlish1.github.io/Streamed/`; the Pages
 job reports the actual deployment URL. A custom domain or repository settings
@@ -82,3 +88,29 @@ can change it. A Pages setup failure does not prevent a separate tag release.
 Pages hosts static frontend files; it cannot run `server.js`, store server-side
 credentials, or provide the optional AI standings endpoints. Keep those on a
 separately secured backend if you enable them later.
+
+## Native downloads
+
+| Asset | Intended use |
+| --- | --- |
+| `streamed-tizen9-1.13.33-development.tpk` | Tizen 9 .NET development build; SDK test signing, not universal Samsung TV installation. |
+| `streamed-android-arm64-development-vVERSION.apk` | Experimental ARM64 Android devices, API 26+; debug signed, real pairing/login flow. |
+| `streamed-android-x64-emulator-sandbox-vVERSION.apk` | x64 Android emulator with the local fixture server; no real account sign-in. |
+
+`BUILD-INFO.json` records the exact source commit and platform/signing constraints.
+The release assembler rejects missing platforms, mismatched commits, dirty native
+builds, or altered package checksums. `SHA256SUMS` covers the packages and install
+notes. CI verifies both APK signatures before publishing.
+
+Samsung TV installation requires a compatible OS and an authorized author and
+distributor signing profile. The native TPK targets API 9 and cannot run on the
+2020 Tizen 5.5 TV; that model uses the web client. Consumer-quality TV signing,
+production Android signing/update identity, login, and media acceptance testing
+remain separate from these development downloads. Do not publish private keys or
+passwords; signing profiles must be supplied securely when that integration is
+configured. The Android debug signer is not stable across independent runner
+builds, so installing a later development APK may require uninstalling first.
+
+The source repository is currently private. Releases and downloads are available
+to people with repository access; this setup does not change source visibility.
+Native packages are also retained as normal workflow artifacts for branch builds.
