@@ -30,6 +30,18 @@
         "version": "1.2.4",
         "url": "https://download.tizen.org/sdk/tizenstudio/official/binary/emulator-supplements_1.2.4_ubuntu-64.zip",
         "sha256": "c08220316393eac16316a374e6c59f88e56d3e4c711d343aa9455fc4ae7efd5a"
+      },
+      {
+        "name": "emulator-storages",
+        "version": "1.5.0",
+        "url": "https://download.tizen.org/sdk/tizenstudio/official/binary/emulator-storages_1.5.0_ubuntu-64.zip",
+        "sha256": "21742b1bc4cb2d50a464114e6157e54a000560c1e2bcfafe9f05798661fdc35b"
+      },
+      {
+        "name": "emulator-control-panel-common",
+        "version": "2.3.0",
+        "url": "https://download.tizen.org/sdk/tizenstudio/official/binary/emulator-control-panel-common_2.3.0_ubuntu-64.zip",
+        "sha256": "dc6b0560977944650dc0b7eaeb9a1e0baa59ebb60a777f981fe06d4edc18e347"
       }
     ]
   }
