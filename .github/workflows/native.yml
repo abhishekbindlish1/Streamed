@@ -55,6 +55,11 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
+      - name: Free unused preinstalled runner toolchains
+        run: |
+          # These tools are unused by the Android job; MAUI and the AVD need disk space.
+          sudo rm -rf -- /opt/hostedtoolcache/CodeQL /usr/share/swift
+          df -h /
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -110,13 +115,15 @@ jobs:
           export ANDROID_AVD_HOME="$RUNNER_TEMP/streamed-avd"
           mkdir -p "$ANDROID_AVD_HOME"
           printf 'no\n' | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --force --name StreamedCi --package 'system-images;android-28;default;x86_64'
+          # Replace generated defaults so each hardware property appears once.
+          sed -i -E '/^(hw\.(cpu\.ncore|ramSize|lcd\.(width|height|density))|disk\.dataPartition\.size)[[:space:]]*=/d' "$ANDROID_AVD_HOME/StreamedCi.avd/config.ini"
           cat >> "$ANDROID_AVD_HOME/StreamedCi.avd/config.ini" <<'CONFIG'
           hw.cpu.ncore=2
           hw.ramSize=1536
           hw.lcd.width=1280
           hw.lcd.height=720
           hw.lcd.density=160
-          disk.dataPartition.size=2147483648
+          disk.dataPartition.size=2G
           CONFIG
           bash scripts/android-ci-smoke.sh StreamedCi
       - uses: actions/upload-artifact@v6

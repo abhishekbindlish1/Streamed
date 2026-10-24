@@ -1,6 +1,6 @@
 {
   "name": "streamed-tv",
-  "version": "1.1.0-preview.2",
+  "version": "1.1.0-preview.3",
   "private": true,
   "description": "Samsung/Tizen sports streaming TV app with a local Team Hub backend",
   "engines": {
