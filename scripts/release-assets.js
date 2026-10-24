@@ -14,7 +14,7 @@ async function context() {
 }
 
 async function collect(kind) {
-  if (!['tizen', 'android'].includes(kind)) throw new Error(`Unknown native component: ${kind}`);
+  if (!['tizen', 'android', 'webos'].includes(kind)) throw new Error(`Unknown component: ${kind}`);
   const build = await context();
   const directory = path.join(root, 'release-native', kind);
   await fs.rm(directory, { recursive: true, force: true });
@@ -49,7 +49,17 @@ async function collect(kind) {
         `streamed-${label}-v${build.version}.apk`, role,
         { architecture: rid, applicationId: appId, minimumAndroidAPI: 26, signing: 'Android debug certificate; uninstall may be required when changing development builds' });
     }
-  } else throw new Error(`Unknown native component: ${kind}`);
+  } else if (kind === 'webos') {
+    const source = path.join(root, `apps/webos/dist/packages/streamed-webos-development-v${build.version}.ipk`);
+    const data = execFileSync('ar', ['p', source, 'data.tar.gz'], { maxBuffer: 32 * 1024 * 1024 });
+    const prefix = 'usr/palm/applications/com.streamed.tv.webos.preview/';
+    const read = name => execFileSync('tar', ['-xOzf', '-', prefix + name], { input: data, encoding: 'utf8', maxBuffer: 1024 * 1024 });
+    const metadata = JSON.parse(read('BUILD.json'));
+    const manifest = JSON.parse(read('appinfo.json'));
+    if (metadata.version !== build.version || metadata.commit !== build.commit || metadata.platform !== 'webos' || metadata.mode !== 'demo') throw new Error('webOS package does not match release source');
+    if (manifest.id !== 'com.streamed.tv.webos.preview' || manifest.type !== 'web') throw new Error('Unexpected webOS package identity');
+    await copy(source, path.basename(source), 'webos-development', { componentVersion: manifest.version, applicationId: manifest.id, compatibilityTarget: 'webOS TV 6.0+', mode: 'offline demo', signing: 'LG Developer Mode package; not an LG Content Store release' });
+  }
   await fs.writeFile(path.join(directory, `${kind}.json`), JSON.stringify({ ...build, packages: records }, null, 2) + '\n');
   return directory;
 }
@@ -63,7 +73,7 @@ async function bundle(input, output, expected) {
   const browser = JSON.parse(execFileSync('unzip', ['-p', browserPath, 'BUILD.json'], { encoding: 'utf8' }));
   if (browser.version !== expected.version || browser.commit !== expected.commit) throw new Error('Browser build does not match the release source');
   const records = [{ name: browserFiles[0], role: 'browser-demo', sha256: hash(await fs.readFile(browserPath)), source: browserPath }];
-  for (const kind of ['tizen', 'android']) {
+  for (const kind of ['tizen', 'android', 'webos']) {
     const directory = path.join(input, kind);
     const metadata = JSON.parse(await fs.readFile(path.join(directory, `${kind}.json`), 'utf8'));
     if (metadata.version !== expected.version || metadata.commit !== expected.commit || metadata.dirty) throw new Error(`${kind} build does not match clean release source`);
@@ -75,14 +85,14 @@ async function bundle(input, output, expected) {
     }
   }
   const roles = records.map(record => record.role).sort();
-  const required = ['android-arm64-development', 'android-x64-sandbox', 'browser-demo', 'tizen-development'].sort();
+  const required = ['android-arm64-development', 'android-x64-sandbox', 'browser-demo', 'tizen-development', 'webos-development'].sort();
   if (JSON.stringify(roles) !== JSON.stringify(required) || new Set(records.map(item => item.name)).size !== records.length) throw new Error('Release must include every platform exactly once');
   await fs.rm(output, { recursive: true, force: true });
   await fs.mkdir(output, { recursive: true });
   for (const record of records) await fs.copyFile(record.source, path.join(output, record.name));
   const manifest = { version: expected.version, commit: expected.commit, packages: records.map(({ source, ...item }) => item) };
   await fs.writeFile(path.join(output, 'BUILD-INFO.json'), JSON.stringify(manifest, null, 2) + '\n');
-  const notes = `# Streamed v${expected.version}\n\nAll packages below are built from commit ${expected.commit}.\n\n## Downloads\n\n${records.map(item => `- ${item.name}`).join('\n')}\n\n## Install and compatibility\n\n- Browser ZIP: unzip and serve over HTTP. It uses sample events and public test videos; no backend credentials are needed.\n- Tizen TPK: native .NET app for Tizen 9 or newer, signed with SDK development certificates. Downloading does not authorize installation on arbitrary Samsung TVs. A compatible TV and an authorized Samsung author/distributor profile are still required. This TPK does not support the 2020 Tizen 5.5 TV; use the web client there.\n- ARM64 APK: experimental development build for 64-bit Android devices, API 26+. Install with adb or Android package installer. It retains the real pairing/login flow; production login and media playback are not validated by the fixture tests. Debug signing is for testing; updates from a different debug signer may require uninstalling the prior app.\n- x64 sandbox APK: Android emulator only. Start npm run sandbox on the emulator host; it uses 10.0.2.2:8080 and skips pairing for fixture data. Do not use it as a production app.\n\nNative builds remain experimental. Signing keys and credentials are never included. SHA256SUMS covers every download, including BUILD-INFO.json and this file.\n\nThis source repository is private; release downloads require repository access.\n`;
+  const notes = `# Streamed v${expected.version}\n\nAll packages below are built from commit ${expected.commit}.\n\n## Downloads\n\n${records.map(item => `- ${item.name}`).join('\n')}\n\n## Install and compatibility\n\n- Browser ZIP: unzip and serve over HTTP. It uses sample events and public test videos; no backend credentials are needed.\n- Tizen TPK: native .NET app for Tizen 9 or newer, signed with SDK development certificates. Downloading does not authorize installation on arbitrary Samsung TVs. A compatible TV and an authorized Samsung author/distributor profile are still required. This TPK does not support the 2020 Tizen 5.5 TV; use the web client there.\n- ARM64 APK: experimental development build for 64-bit Android devices, API 26+. Install with adb or Android package installer. It retains the real pairing/login flow; production login and media playback are not validated by the fixture tests. Debug signing is for testing; updates from a different debug signer may require uninstalling the prior app.\n- LG IPK: experimental webOS TV preview targeting 6.0+, with an offline sample catalog and generated H.264/AAC video. Install using LG Developer Mode and ares-install, then launch com.streamed.tv.webos.preview. It does not enable Developer Mode or provide Content Store authorization. Real TV codecs, DRM and provider streams need separate acceptance testing.\n- x64 sandbox APK: Android emulator only. Start npm run sandbox on the emulator host; it uses 10.0.2.2:8080 and skips pairing for fixture data. Do not use it as a production app.\n\nNative builds remain experimental. Signing keys and credentials are never included. SHA256SUMS covers every download, including BUILD-INFO.json and this file.\n\nThis source repository is private; release downloads require repository access.\n`;
   await fs.writeFile(path.join(output, 'INSTALL.md'), notes);
   const files = (await fs.readdir(output)).sort();
   const sums = [];

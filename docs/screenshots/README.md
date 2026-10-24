@@ -27,3 +27,11 @@ Production login, refined card sizing, and media playback need further acceptanc
 work.
 
 ![Android fixture catalog](android-catalog.png)
+# LG webOS Simulator
+
+The following is a real capture from LG TV 26 Simulator 1.5.0 running the packaged
+preview with its offline catalog. It is separate from the browser and Android
+captures below; it is not a physical TV capture.
+
+![LG Simulator catalog](lg-simulator-catalog.png)
+

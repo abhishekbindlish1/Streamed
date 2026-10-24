@@ -7,7 +7,7 @@ module.exports = defineConfig({
   testDir: './tests',
   testMatch: '**/*.spec.js',
   workers: 2,
-  reporter: [['list'], ['html', { open: 'never' }]],
+  reporter: [...(process.env.CI ? [['github']] : [['list']]), ['html', { open: 'never' }]],
   use: {
     baseURL: 'http://127.0.0.1:3100',
     trace: 'retain-on-failure',

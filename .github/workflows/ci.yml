@@ -35,6 +35,15 @@ jobs:
         run: npm run test:legacy
       - name: Browser tests (desktop, 720p TV, 1080p TV)
         run: npm run test:browser
+      - name: Build and verify the LG webOS development package
+        run: |
+          npm run build:webos
+          node scripts/release-assets.js webos
+      - uses: actions/upload-artifact@v6
+        with:
+          name: webos-distribution
+          path: release-native/webos/
+          if-no-files-found: error
       - name: Save tested browser distribution
         uses: actions/upload-artifact@v6
         with:
@@ -87,6 +96,10 @@ jobs:
         with:
           name: android-distribution
           path: incoming/android
+      - uses: actions/download-artifact@v7
+        with:
+          name: webos-distribution
+          path: incoming/webos
       - name: Check provenance and assemble all-platform release
         run: node scripts/release-assets.js bundle
       - name: Publish all platform downloads

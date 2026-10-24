@@ -12,10 +12,10 @@ not change an Android box into webOS or Tizen.
 | Samsung Tizen web | WGT | Samsung TV extensions in Tizen Studio; choose an image matching the TV OS |
 | Samsung Tizen .NET | TPK | A compatible .NET/NUI runtime and API level, or a physical compatible TV |
 
-The repository currently has Android, Tizen web and Tizen .NET clients. It does
-not have a packaged LG webOS client. An APK or TPK cannot be installed into LG's
-webOS Simulator. The browser client can be the basis of a webOS port, but that
-still needs its webOS manifest, remote/media integration and acceptance tests.
+The repository has Android, Tizen web, Tizen .NET and an experimental LG webOS
+client. The LG app shares `apps/web`, adds its own manifest and produces an IPK
+with `npm run build:webos`. An APK or TPK cannot be installed into LG's Simulator.
+The LG preview includes owned sample media and works without a backend account.
 
 ## Android checks
 
@@ -47,9 +47,22 @@ profile, prepare a webOS application with `appinfo.json`, and launch it with the
 simulator's supported workflow. This tests the webOS app, not the Android APK.
 GUI dependencies and the simulator distribution must be installed on that host.
 
-The LG simulator has not been run in this cloud. Its official download/documentation
-hosts were blocked by the environment proxy; the needed domains are saved in the
-environment draft for review. Installing the CLI alone is not a simulator test.
+The official LG TV 26 Simulator 1.5.0 has run successfully in CI and in this cloud.
+The checks open the staged app using the actual LG platform API, navigate with
+remote keys, decode the local H.264/AAC video, check frames and advancing time,
+exercise Play/Pause, and return to the catalog with Back. Screenshots are retained
+as `lg-simulator-results`. These are Simulator checks, not physical LG TV tests.
+
+`scripts/setup-tv-sdks.py` pins the Linux distribution checksum, checks its archive,
+and prepares its AppImage. The LG download flow needs `webostv.developer.lge.com`,
+`developer.lge.com` and `gfts.lge.com`. The Simulator itself queries `ip-api.com` at
+startup; in this proxy-only cloud that produced an SDK DNS error dialog. Dismissing
+that vendor dialog allowed the app to run. CI on Ubuntu 24 avoids this local
+proxy/DNS limitation. SDK startup and app playback are separate readiness checks.
+
+The managed cloud Chromium also blocks `file://` navigation. Do not change its
+policy to run package tests. The ordinary HTTP browser checks run locally; the
+packaged-file test runs in CI, and LG's own Simulator exercises its own runtime.
 
 ## Samsung workstation setup
 
@@ -66,9 +79,16 @@ establish that it contains the required .NET/NUI runtime. Verify that runtime an
 profile before attempting the TPK. Samsung signing and device authorization still
 apply on physical TVs; SDK development signing is not universal TV installation.
 
-No Samsung TV emulator has been run here. The cloud has no `/dev/kvm` or
-VirtualBox device, and vendor SDK downloads are currently blocked by its proxy.
-Older generic Tizen documentation describes software emulation, but this does not
-prove support for a current Samsung TV image or this app's .NET runtime. Use a
-suitable workstation/runner or a compatible TV for that validation. The existing
-Chromium 69 web checks cover browser compatibility, not the entire Tizen OS.
+The official TV 10.0.6 x64 image and Tizen Studio 6.1 CLI are installed in this
+cloud. Every Samsung component was checked against the vendor's SHA-256 records;
+the download helper also pins the outer distribution. The image advertises .NET 8
+and TizenFX TV API 12.12.0. This does not by itself validate this app's NUI calls.
+
+This cloud has no `/dev/kvm`. The current emulator explicitly rejected startup
+without hardware virtualization, including when software mode was requested.
+The `samsung_emulator` CI job therefore uses an accelerated Ubuntu runner. Its
+first run did not connect to SDB within the boot deadline; that is an unresolved
+VM startup check, not a passed native-app test. The job captures launch logs and a
+desktop screenshot, installs the unchanged development TPK, and checks startup
+only after the VM connects. Native playback and physical device acceptance remain
+separate. Chromium 69 checks cover browser compatibility, not the entire Tizen OS.

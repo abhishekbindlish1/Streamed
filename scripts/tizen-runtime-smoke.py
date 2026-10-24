@@ -39,8 +39,11 @@ try:
     deadline = time.monotonic() + 300
     serial = None
     while time.monotonic() < deadline:
+        if launcher.poll() not in (None, 0):
+            raise RuntimeError('Samsung emulator manager exited before boot: ' + (output / 'launch-vm.log').read_text(errors='replace')[-2500:])
         devices = command([sdb, 'devices'], 'sdb-devices', timeout=15)
-        connected = [line.split()[0] for line in devices.splitlines() if 'device' in line.split()[1:2] and 'emulator' in line]
+        connected = [line.split()[0] for line in devices.splitlines()
+                     if 'device' in line.split()[1:2] and ('emulator' in line or 'StreamedSamsungCi' in line)]
         if len(connected) == 1:
             serial = connected[0]
             break
@@ -62,6 +65,15 @@ try:
     print('Samsung TV 10 emulator booted; the source TPK installed, launched and remained running. Media/provider acceptance is separate.')
 except Exception as error:
     print('::error::Samsung runtime test: ' + str(error).replace('\n', '%0A'), flush=True)
+    for name in ['launch-vm.log', 'sdb-devices.log']:
+        path = output / name
+        if path.exists():
+            text = path.read_text(errors='replace')[-4500:]
+            print('::notice::Samsung ' + name + ': ' + text.replace('%', '%25').replace('\n', '%0A'), flush=True)
+    for path in list(data.rglob('*.log'))[-6:]:
+        if 'emulator' in str(path):
+            text = path.read_text(errors='replace')[-3500:]
+            print('::notice::Samsung VM log: ' + text.replace('%', '%25').replace('\n', '%0A'), flush=True)
     try:
         ImageGrab.grab(xdisplay=os.environ.get('DISPLAY')).save(output / 'tizen-runtime-failure.png')
     except Exception:
