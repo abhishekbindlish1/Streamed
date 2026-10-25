@@ -29,6 +29,8 @@ jobs:
         run: npm run check
       - name: Unit and compatibility checks
         run: npm test
+      - name: Signing setup secret-handling checks
+        run: python3 -m unittest discover -s tests -p test_tizen_signing_setup.py
       - name: Install browser and system dependencies
         run: npx playwright install --with-deps chromium
       - name: Chromium 69 regression checks

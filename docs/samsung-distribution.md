@@ -24,7 +24,15 @@ was used. The successful TV installation is useful evidence about that device's
 development setup. It does not establish that all TV models or the current
 Samsung emulator accept these certificates. The current CI package has different,
 date-valid SDK signing certificates, but the TV 10 emulator rejects its chain
-with installer error `118 / -12`. Its installation problem remains unresolved.
+with installer error `118 / -12`.
+
+[Samsung's emulator installation policy](https://developer.samsung.com/smarttv/develop/getting-started/using-sdk/tv-emulator/application-install-policy.html)
+states: "Since Samsung TV Extension 7.0.1, only applications that have been
+signed with a Samsung certificate can be installed on the TV Emulator." Our
+10.0.6 image falls under that policy. The generic SDK identity does not satisfy
+this documented requirement, even when its dates are valid. A Samsung-issued
+profile still needs to be supplied and verified; repeatedly generating generic
+SDK certificates cannot resolve that requirement.
 
 The uploaded manifest declares API 6.0, while its dependency metadata targets
 Tizen 9.0. Installation alone does not prove compatibility with either an older
@@ -59,6 +67,50 @@ provided. That path is for build checks and does not provide a stable update
 identity. The uploaded TPK contains public certificates, not the private profile
 needed to configure owned release signing. CI support is implemented; a working,
 stable Samsung profile and emulator acceptance still need to be established.
+
+## Configure the profile once
+
+Issuing a Samsung profile requires signing in to a Samsung Developer account in
+Certificate Manager. That account step cannot be replaced by the generic SDK's
+offline certificate generator. Keep the resulting private files locally and
+backed up; do not attach them to a chat, issue, or release.
+
+1. Install the Samsung Certificate Extension in Tizen Studio. Open **Tools →
+   Certificate Manager → + → Samsung → TV**, following [Samsung's
+   instructions](https://developer.samsung.com/smarttv/develop/getting-started/setting-up-sdk/creating-certificates.html).
+2. Create an owned author certificate, or import an existing Samsung author if
+   one is available. The uploaded SDK test certificate is not that owned author.
+3. Create the distributor certificate with public privilege and include the
+   emulator's DUID, currently `XTCJYJZXZBZVK`. This value was reported by our
+   actual CI emulator; check the latest Samsung job's DUID notice if the image or
+   instance changes. Add physical development TVs' DUIDs as needed.
+4. On your local machine, install Python 3, OpenSSL, and the GitHub CLI. Sign in
+   with `gh auth login` using an account permitted to manage this repository's
+   Actions secrets. Update your local checkout of `main`, then run:
+
+   ```sh
+   python3 scripts/configure-tizen-signing.py \
+     --author /path/to/author.p12 \
+     --distributor /path/to/distributor.p12
+   ```
+
+The helper prompts privately for both passwords. It checks repository secret
+access and both P12 files' public certificate dates before writing any secrets.
+It exports no private key, creates no temporary credential files, and passes
+secret values to `gh secret set` through standard input. The GitHub CLI encrypts
+the secrets for GitHub Actions. It never prints passwords or encoded profiles.
+
+After saving all four secrets, it dispatches the actual vendor runtime workflow
+on `main`. Profile setup is complete when the helper succeeds; Samsung
+installation is verified only when the `samsung_emulator` job passes. A date
+check alone does not prove Samsung issuance or device authorization. If an
+upload fails midway, rerun the entire helper so the four stored values agree.
+
+The current cloud GitHub integration cannot list or manage this repository's
+Actions secrets (GitHub returns `403: Resource not accessible by integration`).
+The helper is meant to run locally under your own GitHub authentication. This
+access restriction and Samsung's account sign-in are the remaining user-side
+setup steps; no private Samsung profile has been obtained through this chat.
 
 ## Distribution to a wider audience
 

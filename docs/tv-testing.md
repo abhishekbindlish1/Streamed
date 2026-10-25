@@ -111,6 +111,9 @@ still blocked: Samsung rejects the generic SDK signing chain with installer
 error `118 / -12`. The old NuGet certificates also expired in 2019/2022; the
 build now creates a fresh author and uses the current Studio distributor, and
 the collector rejects expired certificates before publishing.
+[Samsung's installation policy](https://developer.samsung.com/smarttv/develop/getting-started/using-sdk/tv-emulator/application-install-policy.html)
+requires a Samsung-issued certificate for TV Extension 7.0.1 and newer, including
+this TV 10 image. Generic SDK certificate renewal does not meet that requirement.
 
 An authorized Samsung author/distributor profile can be supplied through the
 four repository secrets documented in the [native README](../apps/tizen-dotnet/README.md).
@@ -134,7 +137,8 @@ supplied, so a CI rejection does not establish that your local profile is broken
 The subsequently uploaded working TPK matches the old public NuGet test
 certificates, rather than an owner-specific Samsung profile. See
 [Samsung distribution](samsung-distribution.md) for that comparison and the
-automatic release signing options.
+automatic release signing options, including a one-time local configuration
+helper that saves the profile securely and dispatches the actual runtime check.
 
 The TV CLI reaches this image's installer; the generic `sdb install` command
 returned without installing the app. The test therefore verifies installation,
