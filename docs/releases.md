@@ -92,6 +92,10 @@ separately secured backend if you enable them later.
 
 ## Native downloads
 
+Samsung signing runs once per build, rather than once per download. See
+[Samsung distribution](samsung-distribution.md) for automatic signing with a
+stable profile, development device authorization, and the inspected working TPK.
+
 | Asset | Intended use |
 | --- | --- |
 | `streamed-tizen9-1.13.34-development.tpk` | Tizen 9 .NET development build; current SDK development signing, not universal Samsung TV installation. |

@@ -131,6 +131,10 @@ author key identifies the app publisher; keep the working author identity for
 updates to an installed app. A distributor profile may authorize particular
 devices. CI currently uses a disposable generic SDK identity when no profile is
 supplied, so a CI rejection does not establish that your local profile is broken.
+The subsequently uploaded working TPK matches the old public NuGet test
+certificates, rather than an owner-specific Samsung profile. See
+[Samsung distribution](samsung-distribution.md) for that comparison and the
+automatic release signing options.
 
 The TV CLI reaches this image's installer; the generic `sdb install` command
 returned without installing the app. The test therefore verifies installation,
