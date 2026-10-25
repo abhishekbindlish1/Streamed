@@ -9,12 +9,23 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import warnings
 
 REPOSITORY = 'abhishekbindlish1/Streamed'
 
 
 class SetupError(Exception):
     pass
+
+
+def private_password_prompt(message):
+    # getpass otherwise falls back to an echoed prompt on unsuitable terminals.
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', getpass.GetPassWarning)
+        try:
+            return getpass.getpass(message)
+        except getpass.GetPassWarning:
+            raise SetupError('Cannot prompt without echo; use an interactive terminal') from None
 
 
 def run(arguments, *, data=None, environment=None):
@@ -64,7 +75,7 @@ def validate_profile(contents, password, label):
     return min(expires).date().isoformat()
 
 
-def configure(author, distributor, *, repository=REPOSITORY, password_prompt=getpass.getpass):
+def configure(author, distributor, *, repository=REPOSITORY, password_prompt=private_password_prompt):
     # Check access before asking for passwords or changing any existing secrets.
     access = run(['gh', 'secret', 'list', '--repo', repository, '--json', 'name'])
     if access.returncode:

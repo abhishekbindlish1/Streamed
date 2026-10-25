@@ -7,6 +7,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+import warnings
 from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('signing_setup', Path(__file__).resolve().parents[1] / 'scripts/configure-tizen-signing.py')
@@ -21,6 +22,14 @@ class SigningSetupTests(unittest.TestCase):
         self.author, self.distributor = [Path(temporary.name) / name for name in ['author.p12', 'distributor.p12']]
         self.author.write_bytes(b'author-test-bytes')
         self.distributor.write_bytes(b'distributor-test-bytes')
+
+    def test_echoed_password_fallback_stops_before_reading(self):
+        def insecure_prompt(message):
+            warnings.warn('Cannot disable echo', setup.getpass.GetPassWarning)
+            self.fail('An echoed password must never be read')
+        with patch.object(setup.getpass, 'getpass', side_effect=insecure_prompt):
+            with self.assertRaisesRegex(setup.SetupError, 'Cannot prompt without echo'):
+                setup.private_password_prompt('Password: ')
 
     def test_passwords_and_encoded_profiles_only_reach_secret_stdin(self):
         author_password, distributor_password = 'author-password-value', 'distributor-password-value'
