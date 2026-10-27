@@ -60,6 +60,10 @@ port and stops only processes that it started.
 
 ## LG workstation setup
 
+For installation on a physical TV, follow [LG installation](lg-installation.md).
+Use the IPK for built-in webOS; the Android APKs belong to Android devices or
+attached boxes. The guide includes Developer Mode, key setup, and CLI commands.
+
 Use LG's [webOS TV Simulator documentation](https://webostv.developer.lge.com/develop/tools/simulator-introduction)
 and the official [webOS CLI](https://github.com/webos-tools/cli). Select the `tv`
 profile, prepare a webOS application with `appinfo.json`, and launch it with the

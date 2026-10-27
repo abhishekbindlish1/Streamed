@@ -95,6 +95,8 @@ separately secured backend if you enable them later.
 Samsung signing runs once per build, rather than once per download. See
 [Samsung distribution](samsung-distribution.md) for automatic signing with a
 stable profile, development device authorization, and the inspected working TPK.
+For an LG TV's built-in webOS, download the **IPK**, not either Android APK, and
+follow [LG installation](lg-installation.md).
 
 | Asset | Intended use |
 | --- | --- |
