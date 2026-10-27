@@ -19,6 +19,16 @@ function validateSigningCertificates(xml, now = new Date()) {
   });
 }
 
+function validateAndroidBadging(badging, applicationId, requiredABIs) {
+  const actualId = badging.match(/^package: name='([^']+)'/m)?.[1];
+  const minimumAndroidAPI = Number(badging.match(/^sdkVersion:'(\d+)'/m)?.[1]);
+  const abis = [...(badging.match(/^native-code:\s*(.*)$/m)?.[1] || '').matchAll(/'([^']+)'/g)].map(match => match[1]).sort();
+  if (actualId !== applicationId) throw new Error('Android package has an unexpected application ID');
+  if (!Number.isInteger(minimumAndroidAPI) || minimumAndroidAPI < 1 || minimumAndroidAPI > 26) throw new Error('Android package does not meet the API 26 compatibility contract');
+  if (abis.join(',') !== [...requiredABIs].sort().join(',')) throw new Error(`Android package is missing the required ABI coverage: ${requiredABIs.join(', ')}`);
+  return { applicationId, minimumAndroidAPI, abis };
+}
+
 async function context() {
   const { version } = JSON.parse(await fs.readFile(path.join(root, 'apps/web/package.json'), 'utf8'));
   if (process.env.RELEASE_TAG && process.env.RELEASE_TAG !== `v${version}`) throw new Error('Release tag must match the web package version');
@@ -56,13 +66,18 @@ async function collect(kind) {
       signingExpires: expirations.sort()[0]
     });
   } else if (kind === 'android') {
-    for (const [rid, appId, role, label] of [
-      ['android-arm64', 'com.streamed.tv.android', 'android-arm64-development', 'android-arm64-development'],
-      ['android-x64', 'com.streamed.tv.android.sandbox', 'android-x64-sandbox', 'android-x64-emulator-sandbox']
+    const sdk = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT;
+    if (!sdk) throw new Error('Set ANDROID_HOME to inspect the actual APK compatibility');
+    for (const [appId, role, label, abis] of [
+      ['com.streamed.tv.android', 'android-arm-development', 'android-arm-development', ['armeabi-v7a', 'arm64-v8a']],
+      ['com.streamed.tv.android.sandbox', 'android-emulator-sandbox', 'android-emulator-sandbox', ['x86', 'x86_64']]
     ]) {
-      await copy(path.join(root, `apps/android/bin/Debug/net10.0-android/${rid}/${appId}-Signed.apk`),
+      const source = path.join(root, `apps/android/bin/Debug/net10.0-android/${appId}-Signed.apk`);
+      const badging = execFileSync(path.join(sdk, 'build-tools/36.0.0/aapt'), ['dump', 'badging', source], { encoding: 'utf8' });
+      const compatibility = validateAndroidBadging(badging, appId, abis);
+      await copy(source,
         `streamed-${label}-v${build.version}.apk`, role,
-        { architecture: rid, applicationId: appId, minimumAndroidAPI: 26, signing: 'Android debug certificate; uninstall may be required when changing development builds' });
+        { ...compatibility, signing: 'Android debug certificate; uninstall may be required when changing development builds' });
     }
   } else if (kind === 'webos') {
     const source = path.join(root, `apps/webos/dist/packages/streamed-webos-development-v${build.version}.ipk`);
@@ -100,14 +115,14 @@ async function bundle(input, output, expected) {
     }
   }
   const roles = records.map(record => record.role).sort();
-  const required = ['android-arm64-development', 'android-x64-sandbox', 'browser-demo', 'tizen-development', 'webos-development'].sort();
+  const required = ['android-arm-development', 'android-emulator-sandbox', 'browser-demo', 'tizen-development', 'webos-development'].sort();
   if (JSON.stringify(roles) !== JSON.stringify(required) || new Set(records.map(item => item.name)).size !== records.length) throw new Error('Release must include every platform exactly once');
   await fs.rm(output, { recursive: true, force: true });
   await fs.mkdir(output, { recursive: true });
   for (const record of records) await fs.copyFile(record.source, path.join(output, record.name));
   const manifest = { version: expected.version, commit: expected.commit, packages: records.map(({ source, ...item }) => item) };
   await fs.writeFile(path.join(output, 'BUILD-INFO.json'), JSON.stringify(manifest, null, 2) + '\n');
-  const notes = `# Streamed v${expected.version}\n\nAll packages below are built from commit ${expected.commit}.\n\n## Downloads\n\n${records.map(item => `- ${item.name}`).join('\n')}\n\n## Install and compatibility\n\n- Browser ZIP: unzip and serve over HTTP. It uses sample events and public test videos; no backend credentials are needed.\n- Tizen TPK: native .NET app for Tizen 9 or newer, signed with current SDK development certificates. See signingExpires in BUILD-INFO.json; the SDK developer CA currently expires January 1, 2027. The default SDK build uses a disposable author; uninstall an older build when its signing identity differs. Configured Samsung profiles can provide a stable identity. Downloading does not authorize installation on arbitrary Samsung TVs. A compatible TV and an authorized Samsung author/distributor profile are still required. This TPK does not support the 2020 Tizen 5.5 TV; use the web client there.\n- ARM64 APK: experimental development build for 64-bit Android devices, API 26+. Install with adb or Android package installer. It retains the real pairing/login flow; production login and media playback are not validated by the fixture tests. Debug signing is for testing; updates from a different debug signer may require uninstalling the prior app.\n- LG IPK: experimental webOS TV preview targeting 6.0+, with an offline sample catalog and generated H.264/AAC video. Install using LG Developer Mode and ares-install, then launch com.streamed.tv.webos.preview. It does not enable Developer Mode or provide Content Store authorization. Real TV codecs, DRM and provider streams need separate acceptance testing.\n- x64 sandbox APK: Android emulator only. Start npm run sandbox on the emulator host; it uses 10.0.2.2:8080 and skips pairing for fixture data. Do not use it as a production app.\n\nNative builds remain experimental. Signing keys and credentials are never included. SHA256SUMS covers every download, including BUILD-INFO.json and this file.\n\nThis source repository is private; release downloads require repository access.\n`;
+  const notes = `# Streamed v${expected.version}\n\nAll packages below are built from commit ${expected.commit}.\n\n## Downloads\n\n${records.map(item => `- ${item.name}`).join('\n')}\n\n## Install and compatibility\n\n- Browser ZIP: unzip and serve over HTTP. It uses sample events and public test videos; no backend credentials are needed.\n- Tizen TPK: native .NET app for Tizen 9 or newer, signed with current SDK development certificates. See signingExpires in BUILD-INFO.json; the SDK developer CA currently expires January 1, 2027. The default SDK build uses a disposable author; uninstall an older build when its signing identity differs. Configured Samsung profiles can provide a stable identity. Downloading does not authorize installation on arbitrary Samsung TVs. A compatible TV and an authorized Samsung author/distributor profile are still required. This TPK does not support the 2020 Tizen 5.5 TV; use the web client there.\n- ARM APK: one experimental development build for both 32-bit and 64-bit ARM Android systems, API 26+ (including Android TV 10). Install with adb or Android package installer. It retains the real pairing/login flow; production login and media playback are not validated by the fixture tests. Debug signing is for testing; updates from a different debug signer may require uninstalling the prior app.\n- LG IPK: experimental webOS TV preview targeting 6.0+, with an offline sample catalog and generated H.264/AAC video. Install using LG Developer Mode and ares-install, then launch com.streamed.tv.webos.preview. It does not enable Developer Mode or provide Content Store authorization. Real TV codecs, DRM and provider streams need separate acceptance testing.\n- x86/x64 sandbox APK: Android emulator only. Start npm run sandbox on the emulator host; it uses 10.0.2.2:8080 and skips pairing for fixture data. Do not use it as a production app.\n\nNative builds remain experimental. Signing keys and credentials are never included. SHA256SUMS covers every download, including BUILD-INFO.json and this file.\n\nThis source repository is private; release downloads require repository access.\n`;
   await fs.writeFile(path.join(output, 'INSTALL.md'), notes);
   const files = (await fs.readdir(output)).sort();
   const sums = [];
@@ -122,4 +137,4 @@ if (require.main === module) {
     ? context().then(build => { if (build.dirty) throw new Error('Release checkout must be clean'); return bundle(path.join(root, 'incoming'), path.join(root, 'release'), build); })
     : collect(action)).then(result => console.log(typeof result === 'string' ? result : `Prepared all-platform release v${result.version}`)).catch(error => { console.error(error.message); process.exitCode = 1; });
 }
-module.exports = { bundle, validateSigningCertificates };
+module.exports = { bundle, validateSigningCertificates, validateAndroidBadging };

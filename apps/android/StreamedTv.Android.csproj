@@ -6,12 +6,15 @@
     <RootNamespace>StreamedTv</RootNamespace>
     <AssemblyName>StreamedTv.Android</AssemblyName>
     <ApplicationId>com.streamed.tv.android</ApplicationId>
-    <ApplicationVersion>1</ApplicationVersion>
-    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>3</ApplicationVersion>
+    <ApplicationDisplayVersion>1.1.1</ApplicationDisplayVersion>
     <OutputType>Exe</OutputType>
     <SupportedOSPlatformVersion>26</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <RuntimeIdentifiers Condition="'$(RuntimeIdentifier)' == '' and '$(RuntimeIdentifiers)' == '' and '$(SandboxMode)' != 'true'">android-arm;android-arm64</RuntimeIdentifiers>
+    <RuntimeIdentifiers Condition="'$(RuntimeIdentifier)' == '' and '$(RuntimeIdentifiers)' == '' and '$(SandboxMode)' == 'true'">android-x86;android-x64</RuntimeIdentifiers>
+    <AndroidCreatePackagePerAbi>false</AndroidCreatePackagePerAbi>
   </PropertyGroup>
   <PropertyGroup Condition="'$(SandboxMode)' == 'true'">
     <DefineConstants>$(DefineConstants);SANDBOX</DefineConstants>

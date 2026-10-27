@@ -2,6 +2,23 @@ namespace StreamedTv.Controls;
 
 internal static class RemoteButtonStyle
 {
+    public static bool TryFocus(Button button)
+    {
+        if (!button.IsLoaded || !button.IsVisible || !double.IsFinite(button.Width) ||
+            !double.IsFinite(button.Height) || button.Width <= 0 || button.Height <= 0)
+            return false;
+#if ANDROID
+        if (button.Handler?.PlatformView is not global::Android.Views.View view ||
+            !view.IsLaidOut || view.IsLayoutRequested)
+            return false;
+        var metrics = view.Resources?.DisplayMetrics;
+        if (metrics is null || view.Width <= 0 || view.Height <= 0 ||
+            view.Width > metrics.WidthPixels || view.Height > metrics.HeightPixels)
+            return false;
+#endif
+        return button.Focus();
+    }
+
     public static void Apply(Button button)
     {
         button.BorderWidth = 2;

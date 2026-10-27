@@ -5,7 +5,23 @@ const os = require('node:os');
 const { createHash } = require('node:crypto');
 const { test } = require('node:test');
 const { buildWeb } = require('../apps/web/scripts/build-web');
-const { bundle, validateSigningCertificates } = require('../scripts/release-assets');
+const { bundle, validateSigningCertificates, validateAndroidBadging } = require('../scripts/release-assets');
+
+test('Android device downloads require both ARM ABIs and support older supported OS versions', () => {
+  const app = 'com.streamed.tv.android';
+  const abis = ['armeabi-v7a', 'arm64-v8a'];
+  const valid = `package: name='${app}' versionCode='2'\nsdkVersion:'26'\nnative-code: 'arm64-v8a' 'armeabi-v7a'\n`;
+  assert.deepEqual(validateAndroidBadging(valid, app, abis).abis, ['arm64-v8a', 'armeabi-v7a']);
+  assert.throws(() => validateAndroidBadging(valid.replace(" 'armeabi-v7a'", ''), app, abis), /ABI coverage/);
+  assert.throws(() => validateAndroidBadging(valid.replace("sdkVersion:'26'", "sdkVersion:'30'"), app, abis), /API 26/);
+  assert.throws(() => validateAndroidBadging(valid, app + '.sandbox', abis), /application ID/);
+});
+
+test('Android emulator downloads require 32-bit x86 as well as x64', () => {
+  const text = "package: name='com.streamed.tv.android.sandbox'\nsdkVersion:'26'\nnative-code: 'x86' 'x86_64'\n";
+  assert.equal(validateAndroidBadging(text, 'com.streamed.tv.android.sandbox', ['x86', 'x86_64']).minimumAndroidAPI, 26);
+  assert.throws(() => validateAndroidBadging(text.replace("'x86' ", ''), 'com.streamed.tv.android.sandbox', ['x86', 'x86_64']), /ABI coverage/);
+});
 
 test('TPK release signing rejects expired, future and missing public certificates', async () => {
   // Public SDK signer only; no key or signing credentials are stored here.
@@ -31,7 +47,7 @@ async function fixture(t) {
   const expected = { version, commit: 'release-test' };
   await fs.mkdir(path.join(input, 'browser'), { recursive: true });
   await fs.copyFile(web.archivePath, path.join(input, 'browser', path.basename(web.archivePath)));
-  const roles = { tizen: ['tizen-development'], android: ['android-arm64-development', 'android-x64-sandbox'], webos: ['webos-development'] };
+  const roles = { tizen: ['tizen-development'], android: ['android-arm-development', 'android-emulator-sandbox'], webos: ['webos-development'] };
   for (const [kind, items] of Object.entries(roles)) {
     const directory = path.join(input, kind);
     await fs.mkdir(directory, { recursive: true });
@@ -68,7 +84,7 @@ test('release refuses mismatched source commits', async t => {
 
 test('release refuses tampered native downloads', async t => {
   const { input, output, expected } = await fixture(t);
-  await fs.appendFile(path.join(input, 'android/android-arm64-development.apk'), 'tampered');
+  await fs.appendFile(path.join(input, 'android/android-arm-development.apk'), 'tampered');
   await assert.rejects(bundle(input, output, expected), /Checksum mismatch/);
 });
 

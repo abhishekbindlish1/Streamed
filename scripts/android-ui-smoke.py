@@ -18,7 +18,7 @@ output = Path(os.environ.get('SCREENSHOT_DIR', 'test-results/android'))
 output.mkdir(parents=True, exist_ok=True)
 
 
-def command(*arguments, timeout=40):
+def command(*arguments, timeout=float(os.environ.get('ANDROID_COMMAND_TIMEOUT', '40'))):
     return subprocess.run([adb, *arguments], check=True, capture_output=True, timeout=timeout).stdout
 
 
@@ -66,7 +66,15 @@ def wait_for(predicate, description, timeout=120):
 
 def launch():
     command('shell', 'am', 'force-stop', package)
-    command('shell', 'monkey', '-p', package, '-c', 'android.intent.category.LAUNCHER', '1')
+    resolved = command('shell', 'cmd', 'package', 'resolve-activity', '--brief',
+                       '-a', 'android.intent.action.MAIN', '-c', 'android.intent.category.LAUNCHER', package)
+    components = [line.strip() for line in resolved.decode(errors='replace').splitlines()
+                  if line.strip().startswith(package + '/')]
+    assert len(components) == 1, 'Android did not resolve the fixture launch activity'
+    # Launch the resolved activity directly; do not inject a random Monkey event
+    # while Android is still drawing the first frame.
+    command('shell', 'am', 'start', '-W', '-a', 'android.intent.action.MAIN',
+            '-c', 'android.intent.category.LAUNCHER', '-n', components[0])
 
 
 def focus_button(name):
@@ -93,7 +101,7 @@ def assert_bounded_page_layout():
     limit = max(map(int, dimensions[-1])) * 10
     hierarchy = command('shell', 'dumpsys', 'activity', 'top').decode(errors='replace')
     for line in hierarchy.splitlines():
-        if 'ContentViewGroup{' not in line and 'ShellPageContainer{' not in line and 'BoundedPageView{' not in line:
+        if not any(name in line for name in ['ContentViewGroup{', 'LayoutViewGroup{', 'ShellPageContainer{', 'BoundedPageView{', 'Button{']):
             continue
         bounds = re.search(r'(-?\d+),(-?\d+)-(-?\d+),(-?\d+)', line)
         if bounds:

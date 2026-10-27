@@ -51,7 +51,7 @@ GitHub Actions runs the web, native, and backend checks. Matching `vVERSION` tag
 publish tested browser ZIPs, native development TPK/APKs, and checksums to [Releases](https://github.com/abhishekbindlish1/Streamed/releases).
 Successful main builds can deploy the demo once Pages Source is set to GitHub
 Actions. Native packages are development previews, not Samsung/Play Store releases.
-Android includes an ARM64 device build and an x64 emulator sandbox build. All
+Android includes a combined ARM32/ARM64 device build and an x86/x64 emulator sandbox build. All
 downloads inherit the repository’s private access settings. See [publishing](docs/releases.md).
 See [TV test environments](docs/tv-testing.md) for Android TV, LG webOS and Samsung Tizen.
 

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using CommunityToolkit.Maui;
 using CommunityToolkit.Maui.Core;
+using Microsoft.Maui.Platform;
 
 namespace StreamedTv
 {
@@ -16,6 +17,17 @@ namespace StreamedTv
                 .UseMauiCommunityToolkitMediaElement(false, options => options.SetDefaultAndroidViewType(AndroidViewType.TextureView));
 
 #if ANDROID
+            // MAUI 10.0.120 batches initial properties and casts unset (NaN)
+            // minimums to integers. Use its normal minimum-property converters
+            // afterward; they resolve unset dimensions to zero on 32-bit too.
+            Microsoft.Maui.Handlers.ViewHandler.ViewMapper.AppendToMapping("_InitializeBatchedProperties", (handler, view) =>
+            {
+                if (handler.PlatformView is global::Android.Views.View native)
+                {
+                    native.UpdateMinimumWidth(view);
+                    native.UpdateMinimumHeight(view);
+                }
+            });
             builder.ConfigureMauiHandlers(handlers => handlers.AddHandler<ContentPage, Platforms.Android.BoundedPageHandler>());
             Microsoft.Maui.Handlers.ButtonHandler.Mapper.AppendToMapping("RemoteFocus", (handler, _) =>
             {

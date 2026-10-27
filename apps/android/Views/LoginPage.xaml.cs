@@ -51,7 +51,7 @@ public partial class LoginPage : ContentPage
         RetryButton.Dispatcher.Dispatch(() =>
         {
             if (_retryNeedsFocus && RetryButton.IsVisible && _cts is { IsCancellationRequested: false })
-                _retryNeedsFocus = !RetryButton.Focus();
+                _retryNeedsFocus = !Controls.RemoteButtonStyle.TryFocus(RetryButton);
         });
     }
 

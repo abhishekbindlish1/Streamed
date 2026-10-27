@@ -190,7 +190,20 @@ namespace StreamedTv.Views
 
             StyleRemoteButton(card);
             card.Clicked += async (_, _) => await OnMatchTappedAsync(match, ct);
-            if (match.Id == _selectedMatchId) card.Loaded += (_, _) => Dispatcher.Dispatch(() => card.Focus());
+            if (match.Id == _selectedMatchId)
+            {
+                var needsFocus = true;
+                void FocusWhenReady()
+                {
+                    if (!needsFocus) return;
+                    Dispatcher.Dispatch(() =>
+                    {
+                        if (needsFocus) needsFocus = !Controls.RemoteButtonStyle.TryFocus(card);
+                    });
+                }
+                card.Loaded += (_, _) => FocusWhenReady();
+                card.SizeChanged += (_, _) => FocusWhenReady();
+            }
             MatchList.Children.Add(card);
         }
 

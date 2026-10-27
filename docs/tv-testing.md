@@ -8,6 +8,7 @@ not change an Android box into webOS or Tizen.
 | --- | --- | --- |
 | Android / Google TV | APK | Official Google Android TV API 36 x64 image, hardware-accelerated GitHub runner |
 | Older Android compatibility | APK | API 28 generic Android image in portrait, separate CI job |
+| Android TV 10 / 32-bit runtime | APK | Official Google Android TV API 29 x86 image, separate CI job |
 | LG webOS | IPK web app | LG webOS TV Simulator; older SDKs also provided a VirtualBox emulator |
 | Samsung Tizen web | WGT | Samsung TV extensions in Tizen Studio; choose an image matching the TV OS |
 | Samsung Tizen .NET | TPK | A compatible .NET/NUI runtime and API level, or a physical compatible TV |
@@ -39,8 +40,11 @@ GitHub Actions' normal run page does not expose a live desktop.
 ## Android checks
 
 `native.yml` builds the APKs once, verifies their signatures, then runs the same
-functional checks on two independent emulators. The TV job uses an actual
-Android TV image, not just a phone with a landscape screen.
+functional checks on three independent emulators. The TV jobs use actual
+Android TV images, including Android TV 10 on a 32-bit runtime. The combined
+device APK includes ARM32 and ARM64; the test APK includes x86 and x64. ABI and
+minimum-OS checks inspect the packaged APK. Actual ARM TV installation still
+needs physical-device verification; see [Android installation](android-installation.md).
 
 The UI tests use D-pad and media key events to select matches, open local HLS and
 MP4 test videos, observe native video dimensions and advancing playback time,

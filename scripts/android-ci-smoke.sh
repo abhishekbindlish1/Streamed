@@ -7,8 +7,9 @@ native_adb="$native_sdk/platform-tools/adb"
 native_output="${SCREENSHOT_DIR:-test-results/android}"
 native_port="${ANDROID_EMULATOR_PORT:-5554}"
 native_avd="${1:?Pass the name of a prepared Android AVD}"
-native_apk=apps/android/bin/Debug/net10.0-android/android-x64/com.streamed.tv.android.sandbox-Signed.apk
-native_pairing_apk=apps/android/bin/Debug/net10.0-android/android-x64/com.streamed.tv.android.sandbox.pairing-Signed.apk
+native_apk_directory="${ANDROID_TEST_APK_DIRECTORY:-apps/android/bin/Debug/net10.0-android}"
+native_apk="$native_apk_directory/com.streamed.tv.android.sandbox-Signed.apk"
+native_pairing_apk="$native_apk_directory/com.streamed.tv.android.sandbox.pairing-Signed.apk"
 native_emulator_pid=
 native_server_pid=
 native_stage='start fixture server'
@@ -19,9 +20,11 @@ cleanup() {
   native_result=$?
   trap - EXIT
   if (( native_result != 0 )); then
-    echo "::error::Android test infrastructure failed during: $native_stage (exit $native_result)"
+    echo "::error::Android checks failed during: $native_stage (exit $native_result)"
     timeout 10 "$native_adb" logcat -d -s AndroidRuntime:E StreamedTv:I ExoPlayerImpl:W > "$native_output/android-runtime.log" 2>&1 || true
-    for native_log in emulator sandbox android-runtime; do
+    timeout 10 "$native_adb" logcat -b crash -d > "$native_output/android-crash.log" 2>&1 || true
+    timeout 10 "$native_adb" shell dumpsys activity top > "$native_output/android-layout.log" 2>&1 || true
+    for native_log in emulator sandbox android-runtime android-crash; do
       if [[ -f "$native_output/$native_log.log" ]]; then
         tail -n 60 "$native_output/$native_log.log"
       fi

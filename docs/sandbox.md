@@ -31,15 +31,15 @@ production authentication and must not be deployed as a real backend.
 
 Prerequisites: a full JDK 21, the SDK pinned in `global.json`, Android platform 36
 and build-tools 36.0.0, and the MAUI Android workload. The app supports API 26 and
-newer; startup checks use an API 28 x64 emulator.
+newer; the combined emulator APK supports both 32-bit x86 and x64 Android images.
 
 ```sh
 dotnet workload install maui-android --skip-manifest-update
 bash scripts/verify-dotnet-workloads.sh
 dotnet build apps/android/StreamedTv.Android.csproj -c Debug \
-  -p:SandboxMode=true -p:RuntimeIdentifier=android-x64 \
+  -p:SandboxMode=true \
   -p:EmbedAssembliesIntoApk=true -p:AndroidPackageFormats=apk
-adb install -r apps/android/bin/Debug/net10.0-android/android-x64/com.streamed.tv.android.sandbox-Signed.apk
+adb install -r apps/android/bin/Debug/net10.0-android/com.streamed.tv.android.sandbox-Signed.apk
 ```
 
 Keep `npm run sandbox` running on the emulator host. Android reaches it through
@@ -62,9 +62,12 @@ or `SCREENSHOT_DIR` to change the output folder. CI uses an accelerated emulator
 and uploads screenshots. This cloud machine uses slow software emulation, which
 can show Android system ANRs during startup; those are distinct from app errors
 or a successful rendering check.
+For slow software emulation, `ANDROID_COMMAND_TIMEOUT` can raise the individual
+ADB command deadline; CI retains its 40-second default. Playback and layout
+assertions remain the same.
 
-CI builds the APKs once, then runs separate API 28 portrait and official Android
-TV API 36 landscape images. Each job creates a 4 GB AVD and runs
+CI builds the APKs once, then runs separate API 28 portrait, Android TV 10/API 29
+32-bit x86, and Android TV API 36 x64 landscape images. Each job creates a 4 GB AVD and runs
 `bash scripts/android-ci-smoke.sh StreamedCi`. This starts a disposable read-only
 emulator, checks boot within a deadline, and runs playback and pairing assertions.
 It starts and stops its own fixture server and emulator; startup logs, UI XML and
@@ -75,7 +78,7 @@ For an inactive prepared AVD, pass its name instead. Set
 to replace a running emulator on that port.
 
 The CI launcher also needs the isolated pairing APK. Build it with the same
-x64 command plus `-p:SandboxPairing=true`; its package ID ends in `.sandbox.pairing`.
+combined-emulator command plus `-p:SandboxPairing=true`; its package ID ends in `.sandbox.pairing`.
 For manual pairing checks, start the server with
 `SANDBOX_PAIRING_FIXTURE=true npm run sandbox`, install that APK, and run
 `bash scripts/android-smoke.sh --pairing`. The server deliberately fails one

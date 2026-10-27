@@ -103,36 +103,34 @@ jobs:
           bash scripts/verify-dotnet-workloads.sh
       - name: Install Android build dependencies
         run: bash scripts/setup-android-sdk.sh platform-tools 'platforms;android-36' 'build-tools;36.0.0'
-      - name: Build sandbox APK
+      - name: Build x86 and x64 sandbox APK
         run: |
-          dotnet build apps/android/StreamedTv.Android.csproj -c Debug -p:SandboxMode=true -p:RuntimeIdentifier=android-x64 -p:EmbedAssembliesIntoApk=true -p:AndroidPackageFormats=apk
+          dotnet build apps/android/StreamedTv.Android.csproj -c Debug -p:SandboxMode=true -p:EmbedAssembliesIntoApk=true -p:AndroidPackageFormats=apk
           mkdir -p "$RUNNER_TEMP/streamed-apks"
-          cp apps/android/bin/Debug/net10.0-android/android-x64/com.streamed.tv.android.sandbox-Signed.apk "$RUNNER_TEMP/streamed-apks/"
+          cp apps/android/bin/Debug/net10.0-android/com.streamed.tv.android.sandbox-Signed.apk "$RUNNER_TEMP/streamed-apks/"
       - name: Build isolated pairing fixture APK
         run: |
-          dotnet build apps/android/StreamedTv.Android.csproj -c Debug -p:SandboxMode=true -p:SandboxPairing=true -p:RuntimeIdentifier=android-x64 -p:EmbedAssembliesIntoApk=true -p:AndroidPackageFormats=apk
-          cp apps/android/bin/Debug/net10.0-android/android-x64/com.streamed.tv.android.sandbox.pairing-Signed.apk "$RUNNER_TEMP/streamed-apks/"
-      - name: Build ARM64 device development APK
+          dotnet build apps/android/StreamedTv.Android.csproj -c Debug -p:SandboxMode=true -p:SandboxPairing=true -p:EmbedAssembliesIntoApk=true -p:AndroidPackageFormats=apk
+          cp apps/android/bin/Debug/net10.0-android/com.streamed.tv.android.sandbox.pairing-Signed.apk "$RUNNER_TEMP/streamed-apks/"
+      - name: Build ARM32 and ARM64 device development APK
         run: >-
           dotnet build apps/android/StreamedTv.Android.csproj -c Debug
-          -p:RuntimeIdentifier=android-arm64
           -p:EmbedAssembliesIntoApk=true -p:AndroidPackageFormats=apk
       - name: Verify APK signatures and prepare downloads
         run: |
           # ApplicationId changes can clean previous variant outputs. Restore
           # the immutable copies from this build before collecting the release.
-          mkdir -p apps/android/bin/Debug/net10.0-android/android-x64
-          cp "$RUNNER_TEMP/streamed-apks/"*-Signed.apk apps/android/bin/Debug/net10.0-android/android-x64/
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify apps/android/bin/Debug/net10.0-android/android-x64/com.streamed.tv.android.sandbox-Signed.apk
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify apps/android/bin/Debug/net10.0-android/android-x64/com.streamed.tv.android.sandbox.pairing-Signed.apk
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify apps/android/bin/Debug/net10.0-android/android-arm64/com.streamed.tv.android-Signed.apk
+          cp "$RUNNER_TEMP/streamed-apks/"*-Signed.apk apps/android/bin/Debug/net10.0-android/
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify apps/android/bin/Debug/net10.0-android/com.streamed.tv.android.sandbox-Signed.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify apps/android/bin/Debug/net10.0-android/com.streamed.tv.android.sandbox.pairing-Signed.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify apps/android/bin/Debug/net10.0-android/com.streamed.tv.android-Signed.apk
           node scripts/release-assets.js android
       - uses: actions/upload-artifact@v6
         with:
           name: android-smoke-apks
           path: |
-            apps/android/bin/Debug/net10.0-android/android-x64/com.streamed.tv.android.sandbox-Signed.apk
-            apps/android/bin/Debug/net10.0-android/android-x64/com.streamed.tv.android.sandbox.pairing-Signed.apk
+            apps/android/bin/Debug/net10.0-android/com.streamed.tv.android.sandbox-Signed.apk
+            apps/android/bin/Debug/net10.0-android/com.streamed.tv.android.sandbox.pairing-Signed.apk
           if-no-files-found: error
           retention-days: 7
       - uses: actions/upload-artifact@v6
@@ -152,13 +150,23 @@ jobs:
           - name: android-api28
             api: 28
             target: default
+            abi: x86_64
             width: 720
             height: 1280
             density: 240
             ram: 2048
+          - name: android-tv-api29
+            api: 29
+            target: android-tv
+            abi: x86
+            width: 1280
+            height: 720
+            density: 160
+            ram: 2048
           - name: android-tv-api36
             api: 36
             target: android-tv
+            abi: x86_64
             width: 1280
             height: 720
             density: 160
@@ -177,9 +185,9 @@ jobs:
       - uses: actions/download-artifact@v7
         with:
           name: android-smoke-apks
-          path: apps/android/bin/Debug/net10.0-android/android-x64/
+          path: apps/android/bin/Debug/net10.0-android/
       - name: Install official emulator and selected system image
-        run: bash scripts/setup-android-sdk.sh platform-tools emulator 'system-images;android-${{ matrix.api }};${{ matrix.target }};x86_64'
+        run: bash scripts/setup-android-sdk.sh platform-tools emulator 'system-images;android-${{ matrix.api }};${{ matrix.target }};${{ matrix.abi }}'
       - name: Allow emulator hardware acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -190,7 +198,7 @@ jobs:
         run: |
           export ANDROID_AVD_HOME="$RUNNER_TEMP/streamed-avd"
           mkdir -p "$ANDROID_AVD_HOME"
-          printf 'no\n' | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --force --name StreamedCi --package 'system-images;android-${{ matrix.api }};${{ matrix.target }};x86_64'
+          printf 'no\n' | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --force --name StreamedCi --package 'system-images;android-${{ matrix.api }};${{ matrix.target }};${{ matrix.abi }}'
           sed -i -E '/^(hw\.(cpu\.ncore|ramSize|lcd\.(width|height|density))|disk\.dataPartition\.size)[[:space:]]*=/d' "$ANDROID_AVD_HOME/StreamedCi.avd/config.ini"
           cat >> "$ANDROID_AVD_HOME/StreamedCi.avd/config.ini" <<'CONFIG'
           hw.cpu.ncore=2

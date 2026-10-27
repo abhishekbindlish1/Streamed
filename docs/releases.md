@@ -101,14 +101,18 @@ follow [LG installation](lg-installation.md).
 | Asset | Intended use |
 | --- | --- |
 | `streamed-tizen9-1.13.34-development.tpk` | Tizen 9 .NET development build; current SDK development signing, not universal Samsung TV installation. |
-| `streamed-android-arm64-development-vVERSION.apk` | Experimental ARM64 Android devices, API 26+; debug signed, real pairing/login flow. |
-| `streamed-android-x64-emulator-sandbox-vVERSION.apk` | x64 Android emulator with the local fixture server; no real account sign-in. |
+| `streamed-android-arm-development-vVERSION.apk` | Experimental ARM32 and ARM64 Android systems, API 26+; one debug-signed APK with the real pairing/login flow. |
+| `streamed-android-emulator-sandbox-vVERSION.apk` | x86 and x64 Android emulators with the local fixture server; no real account sign-in. |
 | `streamed-webos-development-vVERSION.ipk` | LG webOS TV preview with an offline catalog and owned sample media; install using LG Developer Mode. |
 
 `BUILD-INFO.json` records the exact source commit and platform/signing constraints.
 The release assembler rejects missing platforms, mismatched commits, dirty native
 builds, or altered package checksums. `SHA256SUMS` covers the packages and install
 notes. CI verifies both APK signatures before publishing.
+The Android collector also requires both device ABIs (`armeabi-v7a` and
+`arm64-v8a`), both emulator ABIs (`x86` and `x86_64`), and a compatible minimum OS
+in the actual APK metadata. Older ARM64-only downloads can fail on TVs with a
+32-bit Android OS. See [Android installation](android-installation.md).
 The TPK collector checks every embedded author/distributor certificate's validity
 and records the earliest expiry as `signingExpires`. Tizen Studio's developer CA
 currently expires January 1, 2027. By default the build generates a disposable

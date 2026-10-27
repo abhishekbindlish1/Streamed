@@ -1,7 +1,7 @@
 # Install the LG webOS preview
 
 Use the `.ipk` package on the LG TV's built-in webOS. The two `.apk` downloads
-are Android builds: ARM64 for Android devices and x64 for the emulator sandbox.
+are Android builds: combined ARM32/ARM64 for Android devices and x86/x64 for the emulator sandbox.
 An Android box connected to an LG screen still needs an Android app, rather
 than the webOS app. Renaming an APK to IPK does not convert it.
 
@@ -58,10 +58,11 @@ the exact CLI error, without the passphrase or private connection key.
 
 ## If an Android box is connected to the LG screen
 
-Use the ARM64 Android APK on a compatible Android system, not the LG IPK. The
-x64 sandbox APK is intended for an emulator. Our Android app requires API 26
-(Android 8.0) or newer and the device APK currently requires a 64-bit ARM Android
-OS. A processor's advertised capability alone does not establish the OS ABI.
+Use the combined ARM Android APK on a compatible Android system, not the LG IPK.
+The x86/x64 sandbox APK is intended for an emulator. Our Android app requires
+API 26 (Android 8.0) or newer. The new device build includes both ARM32 and ARM64;
+older downloads were ARM64-only. A processor's advertised capability alone does
+not establish the OS ABI. See [Android installation](android-installation.md).
 
 With ADB connected, these read-only commands report the relevant device details:
 
