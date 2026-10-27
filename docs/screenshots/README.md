@@ -27,6 +27,17 @@ Production login, refined card sizing, and media playback need further acceptanc
 work.
 
 ![Android fixture catalog](android-catalog.png)
+
+## Android TV 10 compatibility check
+
+Actual Android TV API 29 x86 capture from the diagnostic build used to investigate
+32-bit compatibility. The catalog and native page/scroll bounds checks passed
+after normalizing MAUI's unset minimum dimensions. This is a native emulator
+capture; physical ARM TV acceptance is still pending. See
+[the runtime evidence](../tv-testing.md#android-checks) for the limits of this run.
+
+![Android TV 10 fixture catalog](android-tv10-catalog.png)
+
 ## LG webOS Simulator
 
 The following is a real capture from LG TV 26 Simulator 1.5.0 running the packaged

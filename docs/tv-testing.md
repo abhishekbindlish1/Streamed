@@ -46,6 +46,17 @@ device APK includes ARM32 and ARM64; the test APK includes x86 and x64. ABI and
 minimum-OS checks inspect the packaged APK. Actual ARM TV installation still
 needs physical-device verification; see [Android installation](android-installation.md).
 
+On October 27, the local API 29 x86 investigation confirmed that MAUI 10.0.120
+converted unset minimum dimensions to `Int32.MaxValue` during batched Android
+initialization. Applying its normal minimum-property converters fixed the
+diagnostic build's startup and oversized scroll-content bounds. The native
+player reported a decoded 320×180 frame. The full playback/controls and pairing
+suite did not complete: the software emulator's Android audio service aborted
+with `ubsan: mul-overflow`, and `system_server` later died in its finalizer
+watchdog. A final combined-APK installation retry timed out while the OS was
+recovering. These results are not a complete API 29 regression pass; verify the
+accelerated CI job and physical ARM device separately.
+
 The UI tests use D-pad and media key events to select matches, open local HLS and
 MP4 test videos, observe native video dimensions and advancing playback time,
 pause/resume, and return to the catalog. A separate debug-only application ID
